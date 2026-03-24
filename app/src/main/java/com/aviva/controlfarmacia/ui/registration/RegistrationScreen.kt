@@ -30,6 +30,9 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import java.io.File
 import androidx.core.content.ContextCompat
+import androidx.compose.ui.tooling.preview.Preview
+import com.aviva.controlfarmacia.ui.theme.ControlFarmaciaTheme
+import com.google.accompanist.permissions.PermissionStatus
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -38,11 +41,6 @@ fun RegistrationScreen(
     viewModel: RegistrationViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-    val cameraPermissionState = rememberPermissionState(android.Manifest.permission.CAMERA)
-    
-    val imageCapture = remember { ImageCapture.Builder().build() }
-    var showCamera by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.saveSuccess) {
         if (uiState.saveSuccess) {
@@ -50,7 +48,43 @@ fun RegistrationScreen(
         }
     }
 
+    val cameraPermissionState = rememberPermissionState(android.Manifest.permission.CAMERA)
+
+    RegistrationContent(
+        uiState = uiState,
+        onNavigateBack = onNavigateBack,
+        onNameChange = viewModel::onNameChange,
+        onBarcodeDetected = viewModel::onBarcodeDetected,
+        onExpiryMonthChange = viewModel::onExpiryMonthChange,
+        onExpiryYearChange = viewModel::onExpiryYearChange,
+        onPhotoCaptured = viewModel::onPhotoCaptured,
+        onSaveMedication = viewModel::saveMedication,
+        isCameraPermissionGranted = cameraPermissionState.status.isGranted,
+        onRequestCameraPermission = { cameraPermissionState.launchPermissionRequest() }
+    )
+}
+
+@OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
+@Composable
+fun RegistrationContent(
+    uiState: RegistrationUiState,
+    onNavigateBack: () -> Unit,
+    onNameChange: (String) -> Unit,
+    onBarcodeDetected: (String) -> Unit,
+    onExpiryMonthChange: (Int) -> Unit,
+    onExpiryYearChange: (Int) -> Unit,
+    onPhotoCaptured: (File) -> Unit,
+    onSaveMedication: () -> Unit,
+    isCameraPermissionGranted: Boolean,
+    onRequestCameraPermission: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val imageCapture = remember { ImageCapture.Builder().build() }
+    var showCamera by remember { mutableStateOf(false) }
+
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text("Register Medication") },
@@ -66,9 +100,7 @@ fun RegistrationScreen(
             Box(modifier = Modifier.fillMaxSize()) {
                 CameraPreview(
                     imageCapture = imageCapture,
-                    onBarcodeDetected = { barcode ->
-                        viewModel.onBarcodeDetected(barcode)
-                    }
+                    onBarcodeDetected = onBarcodeDetected
                 )
                 
                 // Camera Controls Overlay
@@ -102,7 +134,7 @@ fun RegistrationScreen(
                                     ContextCompat.getMainExecutor(context),
                                     object : ImageCapture.OnImageSavedCallback {
                                         override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                                            viewModel.onPhotoCaptured(file)
+                                            onPhotoCaptured(file)
                                             showCamera = false
                                         }
                                         override fun onError(exception: ImageCaptureException) {
@@ -152,10 +184,10 @@ fun RegistrationScreen(
                         )
                         FilledTonalButton(
                             onClick = {
-                                if (cameraPermissionState.status.isGranted) {
+                                if (isCameraPermissionGranted) {
                                     showCamera = true
                                 } else {
-                                    cameraPermissionState.launchPermissionRequest()
+                                    onRequestCameraPermission()
                                 }
                             },
                             modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp)
@@ -165,10 +197,10 @@ fun RegistrationScreen(
                     } else {
                         Button(
                             onClick = {
-                                if (cameraPermissionState.status.isGranted) {
+                                if (isCameraPermissionGranted) {
                                     showCamera = true
                                 } else {
-                                    cameraPermissionState.launchPermissionRequest()
+                                    onRequestCameraPermission()
                                 }
                             }
                         ) {
@@ -181,7 +213,7 @@ fun RegistrationScreen(
 
                 OutlinedTextField(
                     value = uiState.name,
-                    onValueChange = viewModel::onNameChange,
+                    onValueChange = onNameChange,
                     label = { Text("Medication Name") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
@@ -226,7 +258,7 @@ fun RegistrationScreen(
                                 DropdownMenuItem(
                                     text = { Text(month.toString().padStart(2, '0')) },
                                     onClick = {
-                                        viewModel.onExpiryMonthChange(month)
+                                        onExpiryMonthChange(month)
                                         expandedMonth = false
                                     }
                                 )
@@ -257,7 +289,7 @@ fun RegistrationScreen(
                                 DropdownMenuItem(
                                     text = { Text(year.toString()) },
                                     onClick = {
-                                        viewModel.onExpiryYearChange(year)
+                                        onExpiryYearChange(year)
                                         expandedYear = false
                                     }
                                 )
@@ -267,7 +299,7 @@ fun RegistrationScreen(
                 }
 
                 Button(
-                    onClick = viewModel::saveMedication,
+                    onClick = onSaveMedication,
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     enabled = !uiState.isSaving
@@ -289,5 +321,51 @@ fun RegistrationScreen(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun RegistrationScreenPreview() {
+    ControlFarmaciaTheme {
+        RegistrationContent(
+            uiState = RegistrationUiState(
+                name = "Ibuprofen 600mg",
+                barcode = "7891234567890",
+                expiryMonth = 5,
+                expiryYear = 2026
+            ),
+            onNavigateBack = {},
+            onNameChange = {},
+            onBarcodeDetected = {},
+            onExpiryMonthChange = {},
+            onExpiryYearChange = {},
+            onPhotoCaptured = {},
+            onSaveMedication = {},
+            isCameraPermissionGranted = true,
+            onRequestCameraPermission = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun RegistrationScreenErrorPreview() {
+    ControlFarmaciaTheme {
+        RegistrationContent(
+            uiState = RegistrationUiState(
+                name = "Paracetamol",
+                error = "Invalid barcode scanned"
+            ),
+            onNavigateBack = {},
+            onNameChange = {},
+            onBarcodeDetected = {},
+            onExpiryMonthChange = {},
+            onExpiryYearChange = {},
+            onPhotoCaptured = {},
+            onSaveMedication = {},
+            isCameraPermissionGranted = false,
+            onRequestCameraPermission = {}
+        )
     }
 }

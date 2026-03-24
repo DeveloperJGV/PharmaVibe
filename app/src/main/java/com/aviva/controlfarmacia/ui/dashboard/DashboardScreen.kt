@@ -13,18 +13,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aviva.controlfarmacia.ui.theme.ControlFarmaciaTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun DashboardScreen(
     onNavigateToList: () -> Unit,
@@ -43,7 +44,21 @@ fun DashboardScreen(
         }
     }
 
+    DashboardContent(
+        uiState = uiState,
+        onNavigateToList = onNavigateToList
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DashboardContent(
+    uiState: DashboardUiState,
+    onNavigateToList: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Scaffold(
+        modifier = modifier,
         topBar = {
             LargeTopAppBar(
                 title = { Text("ControlFarmacia", fontWeight = FontWeight.Bold) }
@@ -138,6 +153,55 @@ fun StatCard(
                 Text(text = value, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
                 Text(text = title, style = MaterialTheme.typography.labelMedium)
             }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun DashboardScreenPreview() {
+    ControlFarmaciaTheme {
+        DashboardContent(
+            uiState = DashboardUiState(
+                totalMedications = 24,
+                expiringThisMonth = 3,
+                expired = 1,
+                isLoading = false
+            ),
+            onNavigateToList = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun StatCardPreview() {
+    ControlFarmaciaTheme {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            StatCard(
+                title = "Total Medications",
+                value = "24",
+                icon = Icons.Default.Inventory,
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            StatCard(
+                title = "Expiring Soon",
+                value = "3",
+                icon = Icons.Default.NotificationsActive,
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+            )
+            StatCard(
+                title = "Expired",
+                value = "1",
+                icon = Icons.Default.Warning,
+                containerColor = MaterialTheme.colorScheme.errorContainer,
+                contentColor = MaterialTheme.colorScheme.onErrorContainer
+            )
         }
     }
 }

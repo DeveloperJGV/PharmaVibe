@@ -1,7 +1,9 @@
 package com.aviva.controlfarmacia.ui.home
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,11 +24,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.aviva.controlfarmacia.data.local.entity.MedicationEntity
+import com.aviva.controlfarmacia.ui.theme.ControlFarmaciaTheme
 import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
@@ -39,6 +43,22 @@ fun SharedTransitionScope.HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    HomeContent(
+        uiState = uiState,
+        onNavigateToRegistration = onNavigateToRegistration,
+        onNavigateToDetail = onNavigateToDetail,
+        animatedVisibilityScope = animatedVisibilityScope
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+@Composable
+fun SharedTransitionScope.HomeContent(
+    uiState: HomeUiState,
+    onNavigateToRegistration: () -> Unit,
+    onNavigateToDetail: (Long) -> Unit,
+    animatedVisibilityScope: AnimatedVisibilityScope
+) {
     Scaffold(
         topBar = {
             LargeTopAppBar(
@@ -143,8 +163,7 @@ fun SharedTransitionScope.MedicationCard(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(MaterialTheme.colorScheme.secondaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
+                        contentAlignment = Alignment.Center) {
                         Text(
                             text = medication.name.take(1).uppercase(),
                             style = MaterialTheme.typography.headlineLarge,
@@ -185,6 +204,62 @@ fun SharedTransitionScope.MedicationCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Preview(showBackground = true)
+@Composable
+fun HomeScreenPreview() {
+    ControlFarmaciaTheme {
+        SharedTransitionLayout {
+            AnimatedVisibility(visible = true) {
+                HomeContent(
+                    uiState = HomeUiState(
+                        medications = listOf(
+                            MedicationEntity(1, "Paracetamol", "Tablet", null, null, 12, 2025),
+                            MedicationEntity(2, "Ibuprofen", "Capsule", null, null, 10, 2024),
+                            MedicationEntity(3, "Amoxicillin", "Capsule", null, null, 5, 2025)
+                        ),
+                        isLoading = false
+                    ),
+                    onNavigateToRegistration = {},
+                    onNavigateToDetail = {},
+                    animatedVisibilityScope = this
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Preview(showBackground = true)
+@Composable
+fun MedicationCardPreview() {
+    ControlFarmaciaTheme {
+        SharedTransitionLayout {
+            AnimatedVisibility(visible = true) {
+                val scope = this
+                Column(
+                    modifier = Modifier.padding(16.dp).width(200.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    MedicationCard(
+                        medication = MedicationEntity(
+                            id = 1,
+                            name = "Paracetamol 500mg",
+                            dosageForm = "Tablet",
+                            photoPath = null,
+                            barcode = null,
+                            expiryMonth = 12,
+                            expiryYear = 2025
+                        ),
+                        onClick = {},
+                        animatedVisibilityScope = scope
+                    )
+                }
             }
         }
     }

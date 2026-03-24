@@ -7,17 +7,24 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.tooling.preview.Preview as ComposePreview
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.aviva.controlfarmacia.ui.theme.ControlFarmaciaTheme
 import com.aviva.controlfarmacia.util.BarcodeAnalyzer
-import java.util.concurrent.Executor
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -29,6 +36,23 @@ fun CameraPreview(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val isInspectionMode = LocalInspectionMode.current
+
+    if (isInspectionMode) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(Color.Black),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "Camera Preview Placeholder",
+                color = Color.White
+            )
+        }
+        return
+    }
+
     val preview = Preview.Builder().build()
     val previewView = remember { PreviewView(context) }
     val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
@@ -67,5 +91,16 @@ private suspend fun Context.getCameraProvider(): ProcessCameraProvider = suspend
         cameraProviderFuture.addListener({
             continuation.resume(cameraProviderFuture.get())
         }, ContextCompat.getMainExecutor(this))
+    }
+}
+
+@ComposePreview(showBackground = true)
+@Composable
+fun CameraPreviewPreview() {
+    ControlFarmaciaTheme {
+        CameraPreview(
+            imageCapture = ImageCapture.Builder().build(),
+            onBarcodeDetected = {}
+        )
     }
 }

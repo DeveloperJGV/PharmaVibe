@@ -1,7 +1,9 @@
 package com.aviva.controlfarmacia.ui.detail
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -22,10 +24,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.aviva.controlfarmacia.data.local.entity.MedicationEntity
+import com.aviva.controlfarmacia.ui.theme.ControlFarmaciaTheme
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
@@ -47,6 +52,25 @@ fun SharedTransitionScope.MedicationDetailScreen(
         }
     }
 
+    MedicationDetailContent(
+        uiState = uiState,
+        onNavigateBack = onNavigateBack,
+        onDeleteClick = { viewModel.deleteMedication() },
+        sharedTransitionScope = this,
+        animatedVisibilityScope = animatedVisibilityScope
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+@Composable
+private fun MedicationDetailContent(
+    uiState: DetailUiState,
+    onNavigateBack: () -> Unit,
+    onDeleteClick: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    modifier: Modifier = Modifier
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -57,12 +81,13 @@ fun SharedTransitionScope.MedicationDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.deleteMedication() }) {
+                    IconButton(onClick = onDeleteClick) {
                         Icon(Icons.Default.Delete, contentDescription = "Delete")
                     }
                 }
             )
-        }
+        },
+        modifier = modifier
     ) { padding ->
         if (uiState.isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -85,17 +110,19 @@ fun SharedTransitionScope.MedicationDetailScreen(
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     if (medication.photoPath != null) {
-                        AsyncImage(
-                            model = medication.photoPath,
-                            contentDescription = medication.name,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .sharedElement(
-                                    rememberSharedContentState(key = "image-${medication.id}"),
-                                    animatedVisibilityScope = animatedVisibilityScope
-                                ),
-                            contentScale = ContentScale.Crop
-                        )
+                        with(sharedTransitionScope) {
+                            AsyncImage(
+                                model = medication.photoPath,
+                                contentDescription = medication.name,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .sharedElement(
+                                        rememberSharedContentState(key = "image-${medication.id}"),
+                                        animatedVisibilityScope = animatedVisibilityScope
+                                    ),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
                     } else {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -115,15 +142,17 @@ fun SharedTransitionScope.MedicationDetailScreen(
                     verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
                     Column {
-                        Text(
-                            text = medication.name,
-                            style = MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.sharedElement(
-                                rememberSharedContentState(key = "name-${medication.id}"),
-                                animatedVisibilityScope = animatedVisibilityScope
+                        with(sharedTransitionScope) {
+                            Text(
+                                text = medication.name,
+                                style = MaterialTheme.typography.headlineLarge,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.sharedElement(
+                                    rememberSharedContentState(key = "name-${medication.id}"),
+                                    animatedVisibilityScope = animatedVisibilityScope
+                                )
                             )
-                        )
+                        }
                         Text(
                             text = medication.dosageForm,
                             style = MaterialTheme.typography.titleLarge,
@@ -168,6 +197,50 @@ fun DetailItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Str
         Column {
             Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(text = value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Preview(showBackground = true)
+@Composable
+fun MedicationDetailPreview() {
+    ControlFarmaciaTheme {
+        SharedTransitionLayout {
+            AnimatedVisibility(visible = true) {
+                MedicationDetailContent(
+                    uiState = DetailUiState(
+                        medication = MedicationEntity(
+                            id = 1,
+                            name = "Paracetamol",
+                            dosageForm = "Tablet",
+                            photoPath = null,
+                            barcode = "123456789",
+                            expiryMonth = 12,
+                            expiryYear = 2025
+                        ),
+                        isLoading = false
+                    ),
+                    onNavigateBack = {},
+                    onDeleteClick = {},
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedVisibilityScope = this@AnimatedVisibility
+                )
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun DetailItemPreview() {
+    ControlFarmaciaTheme {
+        Box(modifier = Modifier.padding(16.dp)) {
+            DetailItem(
+                icon = Icons.Default.CalendarMonth,
+                label = "Expiration Date",
+                value = "12/2025"
+            )
         }
     }
 }
