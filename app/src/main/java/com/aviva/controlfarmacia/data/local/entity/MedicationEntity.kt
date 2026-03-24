@@ -10,7 +10,6 @@ data class MedicationEntity(
     val name: String,
     val dosageForm: String, // e.g., Tablet, Syrup
     val photoPath: String?,
-    val barcode: String?,
     val expiryMonth: Int,
     val expiryYear: Int,
     val createdAt: Long = System.currentTimeMillis()

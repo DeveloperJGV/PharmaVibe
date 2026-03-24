@@ -1,15 +1,13 @@
 <resources>
-    <string name="app_name">ControlFarmacia</string>
+    <string name="app_name">PharmaVibe</string>
     <string name="registration_title">Register Medication</string>
     <string name="back">Back</string>
-    <string name="barcode_format">Barcode: %1$s</string>
     <string name="capture">Capture</string>
     <string name="close_camera">Close Camera</string>
     <string name="medication_photo_description">Medication Photo</string>
     <string name="retake">Retake</string>
     <string name="take_photo_and_scan">Take Photo &amp; Scan</string>
     <string name="medication_name_label">Medication Name</string>
-    <string name="barcode_label">Barcode</string>
     <string name="month_label">Month</string>
     <string name="year_label">Year</string>
     <string name="save_medication">Save Medication</string>
@@ -17,7 +15,6 @@
     <string name="delete">Delete</string>
     <string name="expiration_date_label">Expiration Date</string>
     <string name="expiry_date_format">%1$02d/%2$d</string>
-    <string name="no_barcode">No barcode</string>
     <string name="camera_preview_placeholder">Camera Preview Placeholder</string>
     <string name="inventory_overview">Inventory Overview</string>
     <string name="total_medications">Total Medications</string>

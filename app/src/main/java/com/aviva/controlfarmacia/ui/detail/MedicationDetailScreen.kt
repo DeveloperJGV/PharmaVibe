@@ -14,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -169,12 +168,6 @@ private fun MedicationDetailContent(
                         label = stringResource(R.string.expiration_date_label),
                         value = stringResource(R.string.expiry_date_format, medication.expiryMonth, medication.expiryYear)
                     )
-
-                    DetailItem(
-                        icon = Icons.Default.QrCode,
-                        label = stringResource(R.string.barcode_label),
-                        value = medication.barcode ?: stringResource(R.string.no_barcode)
-                    )
                 }
             }
         }
@@ -217,7 +210,6 @@ fun MedicationDetailPreview() {
                             name = "Paracetamol",
                             dosageForm = "Tablet",
                             photoPath = null,
-                            barcode = "123456789",
                             expiryMonth = 12,
                             expiryYear = 2025
                         ),

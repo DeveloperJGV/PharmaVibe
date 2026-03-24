@@ -20,7 +20,6 @@ import javax.inject.Inject
 data class RegistrationUiState(
     val name: String = "",
     val dosageForm: String = "Tablet",
-    val barcode: String = "",
     val expiryMonth: Int = Calendar.getInstance().get(Calendar.MONTH) + 1,
     val expiryYear: Int = Calendar.getInstance().get(Calendar.YEAR),
     val tempPhotoFile: File? = null,
@@ -47,9 +46,9 @@ class RegistrationViewModel @Inject constructor(
         _uiState.update { it.copy(dosageForm = dosageForm) }
     }
 
-    fun onBarcodeDetected(barcode: String) {
-        if (_uiState.value.barcode != barcode) {
-            _uiState.update { it.copy(barcode = barcode) }
+    fun onTextRecognized(text: String) {
+        if (_uiState.value.name.isBlank() || _uiState.value.name != text) {
+             _uiState.update { it.copy(name = text) }
         }
     }
 
@@ -94,7 +93,6 @@ class RegistrationViewModel @Inject constructor(
                     name = state.name,
                     dosageForm = state.dosageForm,
                     photoPath = finalPhotoPath,
-                    barcode = state.barcode.ifBlank { null },
                     expiryMonth = state.expiryMonth,
                     expiryYear = state.expiryYear
                 )

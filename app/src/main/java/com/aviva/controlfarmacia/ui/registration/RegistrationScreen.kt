@@ -1,7 +1,14 @@
 package com.aviva.controlfarmacia.ui.registration
 
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -44,6 +51,7 @@ fun RegistrationScreen(
     viewModel: RegistrationViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(uiState.saveSuccess) {
         if (uiState.saveSuccess) {
@@ -57,7 +65,20 @@ fun RegistrationScreen(
         uiState = uiState,
         onNavigateBack = onNavigateBack,
         onNameChange = viewModel::onNameChange,
-        onBarcodeDetected = viewModel::onBarcodeDetected,
+        onTextRecognized = { text ->
+            if (uiState.name != text) {
+                viewModel.onTextRecognized(text)
+                // Haptic feedback
+                val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val vibratorManager = context.getSystemService(VibratorManager::class.java)
+                    vibratorManager.defaultVibrator
+                } else {
+                    @Suppress("DEPRECATION")
+                    context.getSystemService(Vibrator::class.java)
+                }
+                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            }
+        },
         onExpiryMonthChange = viewModel::onExpiryMonthChange,
         onExpiryYearChange = viewModel::onExpiryYearChange,
         onPhotoCaptured = viewModel::onPhotoCaptured,
@@ -73,7 +94,7 @@ fun RegistrationContent(
     uiState: RegistrationUiState,
     onNavigateBack: () -> Unit,
     onNameChange: (String) -> Unit,
-    onBarcodeDetected: (String) -> Unit,
+    onTextRecognized: (String) -> Unit,
     onExpiryMonthChange: (Int) -> Unit,
     onExpiryYearChange: (Int) -> Unit,
     onPhotoCaptured: (File) -> Unit,
@@ -103,7 +124,7 @@ fun RegistrationContent(
             Box(modifier = Modifier.fillMaxSize()) {
                 CameraPreview(
                     imageCapture = imageCapture,
-                    onBarcodeDetected = onBarcodeDetected
+                    onTextRecognized = onTextRecognized
                 )
                 
                 // Camera Controls Overlay
@@ -114,17 +135,33 @@ fun RegistrationContent(
                     contentAlignment = Alignment.BottomCenter
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        if (uiState.barcode.isNotEmpty()) {
+                        AnimatedVisibility(
+                            visible = uiState.name.isNotEmpty(),
+                            enter = fadeIn(),
+                            exit = fadeOut()
+                        ) {
                             Surface(
                                 color = MaterialTheme.colorScheme.primaryContainer,
                                 shape = RoundedCornerShape(16.dp),
                                 modifier = Modifier.padding(bottom = 16.dp)
                             ) {
-                                Text(
-                                    text = stringResource(R.string.barcode_format, uiState.barcode),
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Check, 
+                                        contentDescription = null, 
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = uiState.name,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
                         
@@ -219,18 +256,10 @@ fun RegistrationContent(
                     onValueChange = onNameChange,
                     label = { Text(stringResource(R.string.medication_name_label)) },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                OutlinedTextField(
-                    value = uiState.barcode,
-                    onValueChange = { /* Read only */ },
-                    label = { Text(stringResource(R.string.barcode_label)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    readOnly = true,
+                    singleLine = true,
                     trailingIcon = {
-                        if (uiState.barcode.isNotEmpty()) {
-                            Icon(Icons.Default.Check, contentDescription = null, tint = Color.Green)
+                        if (uiState.name.isNotEmpty()) {
+                             Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                 )
@@ -338,13 +367,12 @@ fun RegistrationScreenPreview() {
         RegistrationContent(
             uiState = RegistrationUiState(
                 name = "Ibuprofen 600mg",
-                barcode = "7891234567890",
                 expiryMonth = 5,
                 expiryYear = 2026
             ),
             onNavigateBack = {},
             onNameChange = {},
-            onBarcodeDetected = {},
+            onTextRecognized = {},
             onExpiryMonthChange = {},
             onExpiryYearChange = {},
             onPhotoCaptured = {},

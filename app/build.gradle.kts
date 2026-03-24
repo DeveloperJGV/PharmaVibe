@@ -78,8 +78,9 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
     
-    // ML Kit Barcode Scanning
-    implementation(libs.google.mlkit.barcode.scanning.lib)
+    // ML Kit
+    implementation(libs.google.mlkit.text.recognition)
+    implementation(libs.google.mlkit.barcode.scanning)
     
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)

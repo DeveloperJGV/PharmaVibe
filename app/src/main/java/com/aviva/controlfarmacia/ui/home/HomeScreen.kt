@@ -221,9 +221,9 @@ fun HomeScreenPreview() {
                 HomeContent(
                     uiState = HomeUiState(
                         medications = listOf(
-                            MedicationEntity(1, "Paracetamol", "Tablet", null, null, 12, 2025),
-                            MedicationEntity(2, "Ibuprofen", "Capsule", null, null, 10, 2024),
-                            MedicationEntity(3, "Amoxicillin", "Capsule", null, null, 5, 2025)
+                            MedicationEntity(1, "Paracetamol", "Tablet", null, 12, 2025),
+                            MedicationEntity(2, "Ibuprofen", "Capsule", null, 10, 2024),
+                            MedicationEntity(3, "Amoxicillin", "Capsule", null, 5, 2025)
                         ),
                         isLoading = false
                     ),
@@ -254,7 +254,6 @@ fun MedicationCardPreview() {
                             name = "Paracetamol 500mg",
                             dosageForm = "Tablet",
                             photoPath = null,
-                            barcode = null,
                             expiryMonth = 12,
                             expiryYear = 2025
                         ),
