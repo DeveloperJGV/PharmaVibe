@@ -35,6 +35,7 @@ import java.io.File
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.tooling.preview.Preview
 import com.aviva.controlfarmacia.ui.theme.ControlFarmaciaTheme
+import java.util.Calendar
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -238,6 +239,10 @@ fun RegistrationContent(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    val currentCalendar = remember { Calendar.getInstance() }
+                    val currentYear = currentCalendar.get(Calendar.YEAR)
+                    val currentMonth = currentCalendar.get(Calendar.MONTH) + 1
+
                     var expandedMonth by remember { mutableStateOf(false) }
                     ExposedDropdownMenuBox(
                         expanded = expandedMonth,
@@ -256,7 +261,8 @@ fun RegistrationContent(
                             expanded = expandedMonth,
                             onDismissRequest = { expandedMonth = false }
                         ) {
-                            (1..12).forEach { month ->
+                            val startMonth = if (uiState.expiryYear == currentYear) currentMonth else 1
+                            (startMonth..12).forEach { month ->
                                 DropdownMenuItem(
                                     text = { Text(month.toString().padStart(2, '0')) },
                                     onClick = {
@@ -269,7 +275,6 @@ fun RegistrationContent(
                     }
 
                     var expandedYear by remember { mutableStateOf(false) }
-                    val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
                     ExposedDropdownMenuBox(
                         expanded = expandedYear,
                         onExpandedChange = { expandedYear = it },

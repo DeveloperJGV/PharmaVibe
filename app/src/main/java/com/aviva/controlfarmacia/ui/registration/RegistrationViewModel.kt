@@ -14,14 +14,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.Calendar
 import javax.inject.Inject
 
 data class RegistrationUiState(
     val name: String = "",
     val dosageForm: String = "Tablet",
     val barcode: String = "",
-    val expiryMonth: Int = 1,
-    val expiryYear: Int = 2024,
+    val expiryMonth: Int = Calendar.getInstance().get(Calendar.MONTH) + 1,
+    val expiryYear: Int = Calendar.getInstance().get(Calendar.YEAR),
     val tempPhotoFile: File? = null,
     val capturedPhotoPath: String? = null,
     val isSaving: Boolean = false,
@@ -57,7 +58,18 @@ class RegistrationViewModel @Inject constructor(
     }
 
     fun onExpiryYearChange(year: Int) {
-        _uiState.update { it.copy(expiryYear = year) }
+        val currentCalendar = Calendar.getInstance()
+        val currentYear = currentCalendar.get(Calendar.YEAR)
+        val currentMonth = currentCalendar.get(Calendar.MONTH) + 1
+
+        _uiState.update { state ->
+            val newMonth = if (year == currentYear && state.expiryMonth < currentMonth) {
+                currentMonth
+            } else {
+                state.expiryMonth
+            }
+            state.copy(expiryYear = year, expiryMonth = newMonth)
+        }
     }
 
     fun onPhotoCaptured(file: File) {
