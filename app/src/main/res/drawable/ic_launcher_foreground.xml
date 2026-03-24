@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Medication bottle icon with barcode and expiration symbol (clock) -->
+    <!-- Centered in 108x108. Safe zone 21 to 87 -->
+
+    <!-- Bottle Body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M39,32h30v46c0,2.2 -1.8,4 -4,4h-22c-2.2,0 -4,-1.8 -4,-4z" />
+    <!-- Cap -->
+    <path
+        android:fillColor="#004D40"
+        android:pathData="M37,28h34v6h-34z" />
+    <!-- Label -->
+    <path
+        android:fillColor="#B2DFDB"
+        android:pathData="M39,42h30v22h-30z" />
+    <!-- Barcode lines -->
+    <path
+        android:fillColor="#263238"
+        android:pathData="M44,46h2v14h-2z M48,46h4v14h-4z M54,46h2v14h-2z M58,46h6v14h-6z M66,46h2v14h-2z" />
+
+    <!-- Clock (Expiration) Icon at bottom right of bottle -->
+    <path
+        android:fillColor="#FF5252"
+        android:pathData="M78,78m-14,0a14,14 0,1 1,28 0a14,14 0,1 1,-28 0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M78,69h1.5v9.5l6,3.5l-0.75,1.3l-6.75,-4z" />
+
+</vector>
