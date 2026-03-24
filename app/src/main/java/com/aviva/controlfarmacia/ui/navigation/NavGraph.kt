@@ -6,6 +6,7 @@ import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -13,6 +14,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.aviva.controlfarmacia.R
 import com.aviva.controlfarmacia.ui.dashboard.DashboardScreen
 import com.aviva.controlfarmacia.ui.detail.MedicationDetailScreen
 import com.aviva.controlfarmacia.ui.home.HomeScreen
@@ -102,10 +104,10 @@ fun NavGraphPreview() {
         val navController = rememberNavController()
         NavGraphContent(
             navController = navController,
-            dashboardScreen = { Text("Dashboard Screen") },
-            homeScreen = { Text("Home Screen") },
-            registrationScreen = { Text("Registration Screen") },
-            detailScreen = { id, _ -> Text("Detail Screen for ID: $id") }
+            dashboardScreen = { Text(stringResource(R.string.preview_dashboard_screen)) },
+            homeScreen = { Text(stringResource(R.string.preview_home_screen)) },
+            registrationScreen = { Text(stringResource(R.string.preview_registration_screen)) },
+            detailScreen = { id, _ -> Text(stringResource(R.string.preview_detail_screen_format, id)) }
         )
     }
 }

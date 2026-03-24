@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -29,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.aviva.controlfarmacia.R
 import com.aviva.controlfarmacia.data.local.entity.MedicationEntity
 import com.aviva.controlfarmacia.ui.theme.ControlFarmaciaTheme
 import java.util.Calendar
@@ -62,10 +64,10 @@ fun SharedTransitionScope.HomeContent(
     Scaffold(
         topBar = {
             LargeTopAppBar(
-                title = { Text("My Pharmacy", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.my_pharmacy), fontWeight = FontWeight.Bold) },
                 actions = {
                     IconButton(onClick = { /* TODO: Search */ }) {
-                        Icon(Icons.Default.Search, contentDescription = "Search")
+                        Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
                     }
                 }
             )
@@ -76,7 +78,7 @@ fun SharedTransitionScope.HomeContent(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Medication")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_medication))
             }
         }
     ) { padding ->
@@ -86,7 +88,7 @@ fun SharedTransitionScope.HomeContent(
             }
         } else if (uiState.medications.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No medications registered yet.", style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.no_medications), style = MaterialTheme.typography.bodyLarge)
             }
         } else {
             LazyVerticalGrid(
@@ -179,7 +181,7 @@ fun SharedTransitionScope.MedicationCard(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        text = "${medication.expiryMonth.toString().padStart(2, '0')}/${medication.expiryYear}",
+                        text = stringResource(R.string.expiry_date_format, medication.expiryMonth, medication.expiryYear),
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelSmall,
                         color = badgeTextColor

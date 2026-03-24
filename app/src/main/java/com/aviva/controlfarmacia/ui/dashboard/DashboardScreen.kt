@@ -15,11 +15,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aviva.controlfarmacia.R
 import com.aviva.controlfarmacia.ui.theme.ControlFarmaciaTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -61,7 +63,7 @@ fun DashboardContent(
         modifier = modifier,
         topBar = {
             LargeTopAppBar(
-                title = { Text("ControlFarmacia", fontWeight = FontWeight.Bold) }
+                title = { Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold) }
             )
         }
     ) { padding ->
@@ -74,14 +76,14 @@ fun DashboardContent(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Inventory Overview",
+                text = stringResource(R.string.inventory_overview),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
 
             StatCard(
-                title = "Total Medications",
+                title = stringResource(R.string.total_medications),
                 value = uiState.totalMedications.toString(),
                 icon = Icons.Default.Inventory,
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -94,7 +96,7 @@ fun DashboardContent(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 StatCard(
-                    title = "Expiring Soon",
+                    title = stringResource(R.string.expiring_soon),
                     value = uiState.expiringThisMonth.toString(),
                     icon = Icons.Default.NotificationsActive,
                     containerColor = MaterialTheme.colorScheme.tertiaryContainer,
@@ -102,7 +104,7 @@ fun DashboardContent(
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
-                    title = "Expired",
+                    title = stringResource(R.string.expired),
                     value = uiState.expired.toString(),
                     icon = Icons.Default.Warning,
                     containerColor = MaterialTheme.colorScheme.errorContainer,
@@ -118,7 +120,7 @@ fun DashboardContent(
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
-                Text("View Full Inventory")
+                Text(stringResource(R.string.view_full_inventory))
             }
         }
     }
@@ -182,21 +184,21 @@ fun StatCardPreview() {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             StatCard(
-                title = "Total Medications",
+                title = stringResource(R.string.total_medications),
                 value = "24",
                 icon = Icons.Default.Inventory,
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             )
             StatCard(
-                title = "Expiring Soon",
+                title = stringResource(R.string.expiring_soon),
                 value = "3",
                 icon = Icons.Default.NotificationsActive,
                 containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                 contentColor = MaterialTheme.colorScheme.onTertiaryContainer
             )
             StatCard(
-                title = "Expired",
+                title = stringResource(R.string.expired),
                 value = "1",
                 icon = Icons.Default.Warning,
                 containerColor = MaterialTheme.colorScheme.errorContainer,

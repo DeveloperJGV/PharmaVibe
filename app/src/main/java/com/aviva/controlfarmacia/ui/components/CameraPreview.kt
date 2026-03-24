@@ -20,9 +20,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview as ComposePreview
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.aviva.controlfarmacia.R
 import com.aviva.controlfarmacia.ui.theme.ControlFarmaciaTheme
 import com.aviva.controlfarmacia.util.BarcodeAnalyzer
 import kotlin.coroutines.resume
@@ -46,7 +48,7 @@ fun CameraPreview(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Camera Preview Placeholder",
+                text = stringResource(R.string.camera_preview_placeholder),
                 color = Color.White
             )
         }

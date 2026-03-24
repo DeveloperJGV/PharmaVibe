@@ -19,12 +19,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.aviva.controlfarmacia.R
 import com.aviva.controlfarmacia.ui.components.CameraPreview
+import com.aviva.controlfarmacia.util.UiText
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -32,7 +35,6 @@ import java.io.File
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.tooling.preview.Preview
 import com.aviva.controlfarmacia.ui.theme.ControlFarmaciaTheme
-import com.google.accompanist.permissions.PermissionStatus
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -87,10 +89,10 @@ fun RegistrationContent(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Register Medication") },
+                title = { Text(stringResource(R.string.registration_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -118,7 +120,7 @@ fun RegistrationContent(
                                 modifier = Modifier.padding(bottom = 16.dp)
                             ) {
                                 Text(
-                                    text = "Barcode: ${uiState.barcode}",
+                                    text = stringResource(R.string.barcode_format, uiState.barcode),
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
@@ -145,7 +147,7 @@ fun RegistrationContent(
                             },
                             containerColor = MaterialTheme.colorScheme.primary
                         ) {
-                            Icon(Icons.Default.CameraAlt, contentDescription = "Capture")
+                            Icon(Icons.Default.CameraAlt, contentDescription = stringResource(R.string.capture))
                         }
                     }
                 }
@@ -154,7 +156,7 @@ fun RegistrationContent(
                     onClick = { showCamera = false },
                     modifier = Modifier.padding(16.dp).statusBarsPadding().align(Alignment.TopStart)
                 ) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Close Camera", tint = Color.White)
+                    Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.close_camera), tint = Color.White)
                 }
             }
         } else {
@@ -178,7 +180,7 @@ fun RegistrationContent(
                     if (uiState.capturedPhotoPath != null) {
                         AsyncImage(
                             model = uiState.capturedPhotoPath,
-                            contentDescription = "Medication Photo",
+                            contentDescription = stringResource(R.string.medication_photo_description),
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
@@ -192,7 +194,7 @@ fun RegistrationContent(
                             },
                             modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp)
                         ) {
-                            Text("Retake")
+                            Text(stringResource(R.string.retake))
                         }
                     } else {
                         Button(
@@ -206,7 +208,7 @@ fun RegistrationContent(
                         ) {
                             Icon(Icons.Default.CameraAlt, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Take Photo & Scan")
+                            Text(stringResource(R.string.take_photo_and_scan))
                         }
                     }
                 }
@@ -214,7 +216,7 @@ fun RegistrationContent(
                 OutlinedTextField(
                     value = uiState.name,
                     onValueChange = onNameChange,
-                    label = { Text("Medication Name") },
+                    label = { Text(stringResource(R.string.medication_name_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -222,7 +224,7 @@ fun RegistrationContent(
                 OutlinedTextField(
                     value = uiState.barcode,
                     onValueChange = { /* Read only */ },
-                    label = { Text("Barcode") },
+                    label = { Text(stringResource(R.string.barcode_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     readOnly = true,
                     trailingIcon = {
@@ -246,7 +248,7 @@ fun RegistrationContent(
                             value = uiState.expiryMonth.toString().padStart(2, '0'),
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("Month") },
+                            label = { Text(stringResource(R.string.month_label)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedMonth) },
                             modifier = Modifier.menuAnchor()
                         )
@@ -277,7 +279,7 @@ fun RegistrationContent(
                             value = uiState.expiryYear.toString(),
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("Year") },
+                            label = { Text(stringResource(R.string.year_label)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedYear) },
                             modifier = Modifier.menuAnchor()
                         )
@@ -307,13 +309,13 @@ fun RegistrationContent(
                     if (uiState.isSaving) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
                     } else {
-                        Text("Save Medication", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.save_medication), fontWeight = FontWeight.Bold)
                     }
                 }
 
-                if (uiState.error != null) {
+                uiState.error?.let { error ->
                     Text(
-                        text = uiState.error!!,
+                        text = error.asString(),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 8.dp)
@@ -355,7 +357,7 @@ fun RegistrationScreenErrorPreview() {
         RegistrationContent(
             uiState = RegistrationUiState(
                 name = "Paracetamol",
-                error = "Invalid barcode scanned"
+                error = UiText.DynamicString("Invalid barcode scanned")
             ),
             onNavigateBack = {},
             onNameChange = {},

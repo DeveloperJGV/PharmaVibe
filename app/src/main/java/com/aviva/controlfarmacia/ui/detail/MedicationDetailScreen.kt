@@ -23,12 +23,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.aviva.controlfarmacia.R
 import com.aviva.controlfarmacia.data.local.entity.MedicationEntity
 import com.aviva.controlfarmacia.ui.theme.ControlFarmaciaTheme
 
@@ -74,15 +76,15 @@ private fun MedicationDetailContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Details") },
+                title = { Text(stringResource(R.string.details_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
                     IconButton(onClick = onDeleteClick) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete")
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete))
                     }
                 }
             )
@@ -164,14 +166,14 @@ private fun MedicationDetailContent(
 
                     DetailItem(
                         icon = Icons.Default.CalendarMonth,
-                        label = "Expiration Date",
-                        value = "${medication.expiryMonth.toString().padStart(2, '0')}/${medication.expiryYear}"
+                        label = stringResource(R.string.expiration_date_label),
+                        value = stringResource(R.string.expiry_date_format, medication.expiryMonth, medication.expiryYear)
                     )
 
                     DetailItem(
                         icon = Icons.Default.QrCode,
-                        label = "Barcode",
-                        value = medication.barcode ?: "No barcode"
+                        label = stringResource(R.string.barcode_label),
+                        value = medication.barcode ?: stringResource(R.string.no_barcode)
                     )
                 }
             }
@@ -238,7 +240,7 @@ fun DetailItemPreview() {
         Box(modifier = Modifier.padding(16.dp)) {
             DetailItem(
                 icon = Icons.Default.CalendarMonth,
-                label = "Expiration Date",
+                label = stringResource(R.string.expiration_date_label),
                 value = "12/2025"
             )
         }

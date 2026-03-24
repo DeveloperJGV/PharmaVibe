@@ -2,9 +2,11 @@ package com.aviva.controlfarmacia.ui.registration
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aviva.controlfarmacia.R
 import com.aviva.controlfarmacia.data.local.entity.MedicationEntity
 import com.aviva.controlfarmacia.data.repository.MedicationRepository
 import com.aviva.controlfarmacia.util.LocalMediaManager
+import com.aviva.controlfarmacia.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,7 +26,7 @@ data class RegistrationUiState(
     val capturedPhotoPath: String? = null,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
-    val error: String? = null
+    val error: UiText? = null
 )
 
 @HiltViewModel
@@ -65,7 +67,7 @@ class RegistrationViewModel @Inject constructor(
     fun saveMedication() {
         val state = _uiState.value
         if (state.name.isBlank()) {
-            _uiState.update { it.copy(error = "Please enter medication name") }
+            _uiState.update { it.copy(error = UiText.StringResource(R.string.error_name_required)) }
             return
         }
 
@@ -88,7 +90,13 @@ class RegistrationViewModel @Inject constructor(
                 repository.insertMedication(medication)
                 _uiState.update { it.copy(isSaving = false, saveSuccess = true) }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isSaving = false, error = e.message ?: "Failed to save") }
+                _uiState.update { 
+                    it.copy(
+                        isSaving = false, 
+                        error = e.message?.let { msg -> UiText.DynamicString(msg) } 
+                            ?: UiText.StringResource(R.string.error_failed_to_save)
+                    ) 
+                }
             }
         }
     }
