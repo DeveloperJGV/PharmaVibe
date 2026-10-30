@@ -78,22 +78,48 @@ cambiar cómo se ve la app, más actualización de todo el toolchain.
 - Eliminar: diálogo de confirmación, cero alarmas pendientes, cero fotos huérfanas.
 - Todo lo anterior se repitió en humo con el toolchain actualizado (Coil 3 incluido).
 
+## Funciones nuevas (segunda ronda, 2026-10-30)
+
+Pedidas por el usuario tras la revisión: 1, 2, 3, 4, 5 y 7 de la lista de recomendaciones.
+
+- [x] **Editar medicamento**: misma pantalla de registro en modo edición (`RegistrationRoute(medicationId)`),
+      lápiz en el detalle; conserva tratamiento, horarios y fecha de alta; foto nueva reemplaza y borra la vieja.
+- [x] **Caducidad por OCR**: `ExpiryDateParser` (dominio, 9 pruebas) busca "CAD/EXP/VENCE…" + MM/AAAA, AAAA-MM,
+      nombres de mes en español e inglés y MM/AA junto a la palabra clave; sin palabra clave gana la fecha más
+      tardía (lote y fabricación siempre son anteriores). Se muestra como chip en la cámara y prellena mes/año.
+- [x] **Historial de tomas**: tabla `intakes` (FK con borrado en cascada); "Mark as taken" en la notificación
+      y "Tomada ahora" en el detalle registran la toma; el detalle lista las últimas 10 y permite borrarlas;
+      el tablero muestra "tomas de hoy / esperadas".
+- [x] **Cantidad restante**: campo opcional en el formulario; cada toma descuenta una unidad; umbral de
+      stock bajo 5 (constante, aún no editable); badge "Quedan N" en la cuadrícula, tarjeta "Por acabarse"
+      en el tablero y aviso diario del worker.
+- [x] **Permiso de alarma exacta**: banner en el detalle (solo si el tratamiento está activo y el permiso
+      falta) con botón a Ajustes; se re-evalúa al volver a la pantalla.
+- [x] **Filtros y orden en el inventario**: chips Todos / En tratamiento / Por caducar o caducados /
+      Por acabarse + un chip por paciente; menú de orden: recientes, por caducidad, por nombre.
+
+Esquema Room **v4** con `Migrations.MIGRATION_3_4` (dos columnas nuevas + tabla `intakes`) y prueba
+instrumentada `MigrationTest` sobre los esquemas exportados. 48 pruebas unitarias.
+
 ## Decisiones tomadas (sin preguntar, por ser menores)
 - Inglés como idioma base de la UI; se agrega traducción `values-es`.
-- Esquema de base de datos v3 intacto (mismas columnas) para no necesitar migración en teléfonos
-  que ya la tienen. La columna `dosageForm` (siempre "Tablet", nunca editable) se conserva en la
-  tabla pero sale del modelo de dominio y de la UI; en su lugar se muestra la dosis.
+- La columna `dosageForm` (siempre "Tablet", nunca editable) se conserva en la tabla pero sale del
+  modelo de dominio y de la UI; en su lugar se muestra la dosis.
 - Se elimina el escaneo de código de barras (dependencia y clase): la app pivotó a OCR.
 - Color dinámico de Android 12+ se mantiene como estaba.
-- "Marcar como tomada" sigue solo cerrando la notificación; llevar historial de tomas es función nueva.
+- La cantidad se cuenta en unidades enteras (tabletas, dosis) y cada toma resta exactamente una; no se
+  intenta convertir mg o ml. El umbral de stock bajo es 5 para todos.
+- Los ViewModels leen el id de la ruta con `savedStateHandle["medicationId"]` en vez de `toRoute()` para
+  poder probarse en JVM sin Robolectric.
 - Pequeñas mejoras de UX que salieron de los bugs: confirmación antes de eliminar un medicamento,
   botón para quitar un horario individual, mensaje "sin resultados" distinto de "sin medicamentos".
 - Las pruebas se corren en el emulador Pixel 9a, nunca en el teléfono conectado.
 
 ## Pendientes / ideas futuras
-- Historial de tomas ("marcar como tomada" persistente).
-- Pedir el permiso de alarmas exactas con un enlace a Ajustes en Android 12+ (hoy cae a alarma inexacta de ±1 h).
-- Editar un medicamento ya registrado.
-- Pruebas de migración de Room cuando haya una migración real (el esquema ya se exporta a `app/schemas/`).
-- Pruebas instrumentadas de UI (hoy no hay ninguna; se quitó la de plantilla).
+- Rediseño de la UI (el usuario quiere hacerlo él; las pantallas son delgadas sobre los ViewModels).
+- Alertas de caducidad menos repetitivas (hoy el worker avisa lo mismo cada día).
+- Umbral de stock bajo editable por medicamento.
+- Respaldo / exportación (CSV o Drive).
+- Pruebas instrumentadas de UI (solo existe la de migración).
+- GitHub Actions con build + pruebas + lint.
 - Revisar los cambios de comportamiento de Android 17 (targetSdk 37) en un dispositivo real antes de publicar.

@@ -1,11 +1,12 @@
 package com.aviva.controlfarmacia.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * Room row for a medication. Column names are part of the on-device schema (version 3):
- * change them only together with a migration.
+ * Room row for a medication. Column names are part of the on-device schema:
+ * change them only together with a migration in [com.aviva.controlfarmacia.data.local.Migrations].
  */
 @Entity(tableName = "medications")
 data class MedicationEntity(
@@ -26,5 +27,10 @@ data class MedicationEntity(
     val photoPath: String?,
     val expiryMonth: Int,
     val expiryYear: Int,
+    /** Units left; `null` when not tracked. Added in v4. */
+    val quantity: Int? = null,
+    /** Added in v4. */
+    @ColumnInfo(defaultValue = "5")
+    val lowStockThreshold: Int = 5,
     val createdAt: Long = System.currentTimeMillis()
 )

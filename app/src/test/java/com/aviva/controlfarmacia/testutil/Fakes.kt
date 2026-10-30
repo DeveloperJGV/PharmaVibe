@@ -1,8 +1,10 @@
 package com.aviva.controlfarmacia.testutil
 
 import com.aviva.controlfarmacia.domain.media.MedicationPhotoStore
+import com.aviva.controlfarmacia.domain.model.Intake
 import com.aviva.controlfarmacia.domain.model.Medication
 import com.aviva.controlfarmacia.domain.reminder.ReminderScheduler
+import com.aviva.controlfarmacia.domain.repository.IntakeRepository
 import com.aviva.controlfarmacia.domain.repository.MedicationRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,6 +12,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import java.io.File
 import java.io.IOException
+import java.time.LocalDateTime
+import java.time.LocalTime
 
 /** In-memory repository; search matches name or patient name, case-insensitively. */
 class FakeMedicationRepository(initial: List<Medication> = emptyList()) : MedicationRepository {
@@ -45,6 +49,34 @@ class FakeMedicationRepository(initial: List<Medication> = emptyList()) : Medica
 
     override suspend fun delete(medication: Medication) {
         store.update { list -> list.filterNot { it.id == medication.id } }
+    }
+}
+
+/** In-memory intake log that also consumes a unit from [medications] when quantity is tracked. */
+class FakeIntakeRepository(
+    private val medications: FakeMedicationRepository? = null,
+    initial: List<Intake> = emptyList()
+) : IntakeRepository {
+    private val store = MutableStateFlow(initial)
+    private var nextId = (initial.maxOfOrNull { it.id } ?: 0L) + 1
+
+    val intakes: List<Intake> get() = store.value
+
+    override suspend fun recordIntake(medicationId: Long, takenAt: LocalDateTime, scheduledTime: LocalTime?): Intake {
+        val intake = Intake(id = nextId++, medicationId = medicationId, takenAt = takenAt, scheduledTime = scheduledTime)
+        store.update { it + intake }
+        medications?.getById(medicationId)?.takeIf { it.quantity != null }?.let { medications.update(it.afterIntake()) }
+        return intake
+    }
+
+    override fun observeSince(from: LocalDateTime): Flow<List<Intake>> =
+        store.map { list -> list.filter { !it.takenAt.isBefore(from) }.sortedByDescending { it.takenAt } }
+
+    override fun observeForMedication(medicationId: Long, limit: Int): Flow<List<Intake>> =
+        store.map { list -> list.filter { it.medicationId == medicationId }.sortedByDescending { it.takenAt }.take(limit) }
+
+    override suspend fun delete(intake: Intake) {
+        store.update { list -> list.filterNot { it.id == intake.id } }
     }
 }
 

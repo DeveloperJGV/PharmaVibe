@@ -26,8 +26,15 @@ data object DashboardRoute
 @Serializable
 data object HomeRoute
 
+/** New medication when [medicationId] is [NO_MEDICATION]; otherwise edits that one. */
 @Serializable
-data object RegistrationRoute
+data class RegistrationRoute(val medicationId: Long = NO_MEDICATION) {
+    val isEdit: Boolean get() = medicationId != NO_MEDICATION
+
+    companion object {
+        const val NO_MEDICATION = -1L
+    }
+}
 
 @Serializable
 data class DetailRoute(val medicationId: Long)
@@ -45,7 +52,7 @@ fun NavGraph(navController: NavHostController) {
         homeScreen = { animatedVisibilityScope ->
             HomeScreen(
                 onNavigateToRegistration = {
-                    navController.navigate(RegistrationRoute) { launchSingleTop = true }
+                    navController.navigate(RegistrationRoute()) { launchSingleTop = true }
                 },
                 onNavigateToDetail = { id ->
                     navController.navigate(DetailRoute(id)) { launchSingleTop = true }
@@ -59,6 +66,9 @@ fun NavGraph(navController: NavHostController) {
         detailScreen = { animatedVisibilityScope ->
             MedicationDetailScreen(
                 onNavigateBack = { navController.popBackStack() },
+                onNavigateToEdit = { id ->
+                    navController.navigate(RegistrationRoute(id)) { launchSingleTop = true }
+                },
                 animatedVisibilityScope = animatedVisibilityScope
             )
         }

@@ -22,15 +22,18 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -38,7 +41,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
@@ -57,12 +59,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -73,7 +77,9 @@ import com.aviva.controlfarmacia.R
 import com.aviva.controlfarmacia.domain.model.DosageUnit
 import com.aviva.controlfarmacia.domain.model.PatientCategory
 import com.aviva.controlfarmacia.ui.camera.CameraPreview
+import com.aviva.controlfarmacia.ui.camera.RecognizedText
 import com.aviva.controlfarmacia.ui.common.UiText
+import com.aviva.controlfarmacia.ui.common.label
 import com.aviva.controlfarmacia.ui.common.labelRes
 import com.aviva.controlfarmacia.ui.common.nameFieldLabelRes
 import com.aviva.controlfarmacia.ui.theme.ControlFarmaciaTheme
@@ -87,11 +93,12 @@ import java.time.YearMonth
 data class RegistrationActions(
     val onNavigateBack: () -> Unit = {},
     val onNameChange: (String) -> Unit = {},
-    val onTextRecognized: (String) -> Unit = {},
+    val onTextRecognized: (RecognizedText) -> Unit = {},
     val onDosageValueChange: (String) -> Unit = {},
     val onDosageUnitChange: (DosageUnit) -> Unit = {},
     val onPatientCategoryChange: (PatientCategory) -> Unit = {},
     val onPatientNameChange: (String) -> Unit = {},
+    val onQuantityChange: (String) -> Unit = {},
     val onExpiryMonthChange: (Int) -> Unit = {},
     val onExpiryYearChange: (Int) -> Unit = {},
     val onCreateCaptureFile: () -> File = { File.createTempFile("capture", ".jpg") },
@@ -130,6 +137,7 @@ fun RegistrationScreen(
             onDosageUnitChange = viewModel::onDosageUnitChange,
             onPatientCategoryChange = viewModel::onPatientCategoryChange,
             onPatientNameChange = viewModel::onPatientNameChange,
+            onQuantityChange = viewModel::onQuantityChange,
             onExpiryMonthChange = viewModel::onExpiryMonthChange,
             onExpiryYearChange = viewModel::onExpiryYearChange,
             onCreateCaptureFile = viewModel::createCaptureFile,
@@ -163,7 +171,9 @@ fun RegistrationContent(
         topBar = {
             if (!showCamera) {
                 TopAppBar(
-                    title = { Text(stringResource(R.string.registration_title)) },
+                    title = {
+                        Text(stringResource(if (uiState.isEdit) R.string.edit_title else R.string.registration_title))
+                    },
                     navigationIcon = {
                         IconButton(onClick = actions.onNavigateBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -173,10 +183,11 @@ fun RegistrationContent(
             }
         }
     ) { padding ->
-        if (showCamera) {
-            CameraCapture(
+        when {
+            showCamera -> CameraCapture(
                 imageCapture = imageCapture,
                 recognizedName = uiState.name,
+                recognizedExpiry = uiState.recognizedExpiry,
                 onTextRecognized = actions.onTextRecognized,
                 onCreateCaptureFile = actions.onCreateCaptureFile,
                 onPhotoCaptured = { file ->
@@ -189,8 +200,15 @@ fun RegistrationContent(
                 },
                 onClose = { showCamera = false }
             )
-        } else {
-            RegistrationForm(
+
+            uiState.isLoading -> Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) { CircularProgressIndicator() }
+
+            else -> RegistrationForm(
                 uiState = uiState,
                 today = today,
                 actions = actions,
@@ -209,7 +227,8 @@ fun RegistrationContent(
 private fun CameraCapture(
     imageCapture: ImageCapture,
     recognizedName: String,
-    onTextRecognized: (String) -> Unit,
+    recognizedExpiry: YearMonth?,
+    onTextRecognized: (RecognizedText) -> Unit,
     onCreateCaptureFile: () -> File,
     onPhotoCaptured: (File) -> Unit,
     onPhotoCaptureFailed: () -> Unit,
@@ -227,26 +246,15 @@ private fun CameraCapture(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             AnimatedVisibility(visible = recognizedName.isNotEmpty(), enter = fadeIn(), exit = fadeOut()) {
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.padding(bottom = 16.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(text = recognizedName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                    }
-                }
+                RecognizedChip(icon = Icons.Default.Check, text = recognizedName)
             }
+            AnimatedVisibility(visible = recognizedExpiry != null, enter = fadeIn(), exit = fadeOut()) {
+                RecognizedChip(
+                    icon = Icons.Default.CalendarMonth,
+                    text = stringResource(R.string.recognized_expiry, recognizedExpiry?.label().orEmpty())
+                )
+            }
+            Spacer(Modifier.height(8.dp))
 
             FloatingActionButton(
                 onClick = {
@@ -288,6 +296,24 @@ private fun CameraCapture(
     }
 }
 
+@Composable
+private fun RecognizedChip(icon: ImageVector, text: String) {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.padding(bottom = 8.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(8.dp))
+            Text(text = text, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RegistrationForm(
@@ -298,7 +324,7 @@ private fun RegistrationForm(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        PhotoBox(photo = uiState.capturedPhoto, onOpenCamera = onOpenCamera)
+        PhotoBox(photo = uiState.photoModel, onOpenCamera = onOpenCamera)
 
         OutlinedTextField(
             value = uiState.name,
@@ -330,6 +356,16 @@ private fun RegistrationForm(
                 modifier = Modifier.weight(1f)
             )
         }
+
+        OutlinedTextField(
+            value = uiState.quantity,
+            onValueChange = actions.onQuantityChange,
+            label = { Text(stringResource(R.string.quantity_label)) },
+            supportingText = { Text(stringResource(R.string.quantity_hint)) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             val categories = PatientCategory.entries
@@ -384,7 +420,10 @@ private fun RegistrationForm(
             if (uiState.isSaving) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
             } else {
-                Text(stringResource(R.string.save_medication), fontWeight = FontWeight.Bold)
+                Text(
+                    stringResource(if (uiState.isEdit) R.string.save_changes else R.string.save_medication),
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
 
@@ -399,7 +438,7 @@ private fun RegistrationForm(
 }
 
 @Composable
-private fun PhotoBox(photo: File?, onOpenCamera: () -> Unit) {
+private fun PhotoBox(photo: Any?, onOpenCamera: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -483,7 +522,7 @@ private const val YEARS_AHEAD = 10
 private fun RegistrationScreenPreview() {
     ControlFarmaciaTheme {
         RegistrationContent(
-            uiState = RegistrationUiState(name = "Ibuprofen 600mg", expiry = YearMonth.of(2027, 5)),
+            uiState = RegistrationUiState(name = "Ibuprofen 600mg", quantity = "20", expiry = YearMonth.of(2027, 5)),
             today = YearMonth.of(2026, 10),
             isCameraPermissionGranted = true,
             actions = RegistrationActions()

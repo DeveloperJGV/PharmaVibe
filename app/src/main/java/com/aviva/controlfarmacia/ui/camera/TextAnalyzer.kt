@@ -11,16 +11,24 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import java.io.Closeable
 
+/** What one analysed frame contained. */
+data class RecognizedText(
+    /** The largest text block, usually the brand name on the box. */
+    val prominent: String,
+    /** Every line the recognizer found, for date parsing. */
+    val fullText: String
+)
+
 /**
- * Runs ML Kit text recognition on each frame and reports the most prominent text block
- * whenever it changes. Callbacks arrive on the main thread.
+ * Runs ML Kit text recognition on each frame and reports the result whenever the prominent
+ * text changes. Callbacks arrive on the main thread.
  */
 class TextAnalyzer(
-    private val onTextRecognized: (String) -> Unit
+    private val onTextRecognized: (RecognizedText) -> Unit
 ) : ImageAnalysis.Analyzer, Closeable {
 
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-    private var lastText: String? = null
+    private var lastProminent: String? = null
 
     @OptIn(ExperimentalGetImage::class)
     override fun analyze(imageProxy: ImageProxy) {
@@ -32,10 +40,10 @@ class TextAnalyzer(
         val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
         recognizer.process(image)
             .addOnSuccessListener { result ->
-                val text = findProminentText(result) ?: return@addOnSuccessListener
-                if (text != lastText) {
-                    lastText = text
-                    onTextRecognized(text)
+                val prominent = findProminentText(result) ?: return@addOnSuccessListener
+                if (prominent != lastProminent) {
+                    lastProminent = prominent
+                    onTextRecognized(RecognizedText(prominent, result.text))
                 }
             }
             .addOnFailureListener { e -> Log.w(TAG, "Text recognition failed", e) }
@@ -44,7 +52,6 @@ class TextAnalyzer(
 
     override fun close() = recognizer.close()
 
-    /** The block with the largest bounding box is usually the brand name on a box. */
     private fun findProminentText(visionText: Text): String? =
         visionText.textBlocks
             .maxByOrNull { block -> block.boundingBox?.let { it.width() * it.height() } ?: 0 }

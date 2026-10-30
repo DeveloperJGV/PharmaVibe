@@ -4,6 +4,7 @@ package com.aviva.controlfarmacia.data.notification
 object NotificationIds {
     const val EXPIRED = 1
     const val EXPIRING_SOON = 2
+    const val LOW_STOCK = 3
 
     /** Reminder slots per medication; [reminder] codes are unique below this many times. */
     const val MAX_REMINDERS_PER_MEDICATION = 100

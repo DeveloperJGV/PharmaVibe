@@ -1,6 +1,9 @@
 package com.aviva.controlfarmacia.domain.model
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalTime
 import java.time.YearMonth
@@ -9,7 +12,8 @@ class MedicationTest {
 
     private val today = YearMonth.of(2026, 10)
 
-    private fun medication(expiry: YearMonth) = Medication(name = "Test", expiry = expiry)
+    private fun medication(expiry: YearMonth = today, quantity: Int? = null) =
+        Medication(name = "Test", expiry = expiry, quantity = quantity)
 
     @Test
     fun `expiry before current month is expired`() {
@@ -36,5 +40,21 @@ class MedicationTest {
 
         assertEquals(emptyList<LocalTime>(), inactive.activeReminderTimes)
         assertEquals(times, active.activeReminderTimes)
+    }
+
+    @Test
+    fun `low stock only applies when quantity is tracked and at or below the threshold`() {
+        assertFalse(medication(quantity = null).isLowStock)
+        assertFalse(medication(quantity = 6).isLowStock)
+        assertTrue(medication(quantity = 5).isLowStock)
+        assertTrue(medication(quantity = 0).isLowStock)
+        assertFalse(medication(quantity = 5).copy(lowStockThreshold = 2).isLowStock)
+    }
+
+    @Test
+    fun `an intake consumes one unit but never goes negative`() {
+        assertEquals(9, medication(quantity = 10).afterIntake().quantity)
+        assertEquals(0, medication(quantity = 0).afterIntake().quantity)
+        assertNull(medication(quantity = null).afterIntake().quantity)
     }
 }

@@ -1,12 +1,15 @@
 package com.aviva.controlfarmacia.ui.registration
 
+import androidx.lifecycle.SavedStateHandle
 import com.aviva.controlfarmacia.R
 import com.aviva.controlfarmacia.domain.model.Dosage
 import com.aviva.controlfarmacia.domain.model.DosageUnit
+import com.aviva.controlfarmacia.domain.model.Medication
 import com.aviva.controlfarmacia.domain.model.PatientCategory
 import com.aviva.controlfarmacia.testutil.FakeMedicationRepository
 import com.aviva.controlfarmacia.testutil.FakePhotoStore
 import com.aviva.controlfarmacia.testutil.MainDispatcherRule
+import com.aviva.controlfarmacia.ui.camera.RecognizedText
 import com.aviva.controlfarmacia.ui.common.UiText
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -17,6 +20,7 @@ import org.junit.Rule
 import org.junit.Test
 import java.time.Clock
 import java.time.Instant
+import java.time.LocalTime
 import java.time.YearMonth
 import java.time.ZoneOffset
 
@@ -30,12 +34,20 @@ class RegistrationViewModelTest {
 
     private fun viewModel(
         repository: FakeMedicationRepository = FakeMedicationRepository(),
-        photoStore: FakePhotoStore = FakePhotoStore()
-    ) = RegistrationViewModel(repository, photoStore, clock)
+        photoStore: FakePhotoStore = FakePhotoStore(),
+        editId: Long? = null
+    ) = RegistrationViewModel(
+        savedStateHandle = SavedStateHandle(editId?.let { mapOf(RegistrationViewModel.MEDICATION_ID_KEY to it) } ?: emptyMap()),
+        repository = repository,
+        photoStore = photoStore,
+        clock = clock
+    )
 
     @Test
     fun `defaults expiry to the current month`() {
-        assertEquals(today, viewModel().uiState.value.expiry)
+        val state = viewModel().uiState.value
+        assertEquals(today, state.expiry)
+        assertFalse(state.isEdit)
     }
 
     @Test
@@ -53,7 +65,7 @@ class RegistrationViewModelTest {
     }
 
     @Test
-    fun `saves trimmed fields and omits dosage when value is blank`() = runTest {
+    fun `saves trimmed fields and omits dosage and quantity when blank`() = runTest {
         val repository = FakeMedicationRepository()
         val viewModel = viewModel(repository)
 
@@ -69,6 +81,7 @@ class RegistrationViewModelTest {
         val saved = repository.medications.single()
         assertEquals("Paracetamol", saved.name)
         assertNull(saved.dosage)
+        assertNull(saved.quantity)
         assertEquals(PatientCategory.PET, saved.patientCategory)
         assertEquals("Luna", saved.patientName)
         assertEquals(YearMonth.of(2027, 3), saved.expiry)
@@ -76,16 +89,19 @@ class RegistrationViewModelTest {
     }
 
     @Test
-    fun `saves dosage with the selected unit`() = runTest {
+    fun `saves dosage with the selected unit and the quantity`() = runTest {
         val repository = FakeMedicationRepository()
         val viewModel = viewModel(repository)
 
         viewModel.onNameChange("Ibuprofen")
         viewModel.onDosageValueChange("600")
         viewModel.onDosageUnitChange(DosageUnit.TABLET)
+        viewModel.onQuantityChange("2x0")
         viewModel.save()
 
-        assertEquals(Dosage("600", DosageUnit.TABLET), repository.medications.single().dosage)
+        val saved = repository.medications.single()
+        assertEquals(Dosage("600", DosageUnit.TABLET), saved.dosage)
+        assertEquals(20, saved.quantity)
     }
 
     @Test
@@ -97,6 +113,28 @@ class RegistrationViewModelTest {
         viewModel.onExpiryYearChange(2026)
 
         assertEquals(today, viewModel.uiState.value.expiry)
+    }
+
+    @Test
+    fun `OCR fills the name and a future expiry printed on the box`() {
+        val viewModel = viewModel()
+
+        viewModel.onTextRecognized(RecognizedText("AMOXICILINA", "AMOXICILINA 500 mg\nLOTE 1234\nCAD 06/2028"))
+
+        val state = viewModel.uiState.value
+        assertEquals("AMOXICILINA", state.name)
+        assertEquals(YearMonth.of(2028, 6), state.expiry)
+        assertEquals(YearMonth.of(2028, 6), state.recognizedExpiry)
+    }
+
+    @Test
+    fun `OCR ignores an expiry already in the past`() {
+        val viewModel = viewModel()
+
+        viewModel.onTextRecognized(RecognizedText("OLD", "OLD\nCAD 01/2025"))
+
+        assertEquals(today, viewModel.uiState.value.expiry)
+        assertNull(viewModel.uiState.value.recognizedExpiry)
     }
 
     @Test
@@ -129,5 +167,69 @@ class RegistrationViewModelTest {
 
         assertEquals(listOf(capture), photoStore.persisted)
         assertEquals("/photos/${capture.name}", repository.medications.single().photoPath)
+    }
+
+    @Test
+    fun `edit mode prefills the form and keeps what the form does not show`() = runTest {
+        val existing = Medication(
+            id = 7,
+            name = "Paracetamol",
+            dosage = Dosage("500", DosageUnit.MILLIGRAM),
+            patientName = "Ana",
+            isInTreatment = true,
+            reminderTimes = listOf(LocalTime.of(8, 0)),
+            photoPath = "/photos/old.jpg",
+            expiry = YearMonth.of(2027, 3),
+            quantity = 12,
+            createdAt = 42
+        )
+        val repository = FakeMedicationRepository(listOf(existing))
+        val viewModel = viewModel(repository, editId = 7)
+
+        val loaded = viewModel.uiState.value
+        assertTrue(loaded.isEdit)
+        assertFalse(loaded.isLoading)
+        assertEquals("Paracetamol", loaded.name)
+        assertEquals("500", loaded.dosageValue)
+        assertEquals("12", loaded.quantity)
+        assertEquals("/photos/old.jpg", loaded.existingPhotoPath)
+
+        viewModel.onNameChange("Paracetamol Forte")
+        viewModel.onQuantityChange("")
+        viewModel.save()
+
+        assertTrue(viewModel.uiState.value.saveSuccess)
+        val saved = repository.medications.single()
+        assertEquals(7L, saved.id)
+        assertEquals("Paracetamol Forte", saved.name)
+        assertNull(saved.quantity)
+        assertEquals(42L, saved.createdAt)
+        assertTrue(saved.isInTreatment)
+        assertEquals(listOf(LocalTime.of(8, 0)), saved.reminderTimes)
+        assertEquals("/photos/old.jpg", saved.photoPath)
+    }
+
+    @Test
+    fun `editing with a new photo replaces and deletes the old one`() = runTest {
+        val existing = Medication(id = 3, name = "X", photoPath = "/photos/old.jpg", expiry = YearMonth.of(2027, 3))
+        val repository = FakeMedicationRepository(listOf(existing))
+        val photoStore = FakePhotoStore()
+        val viewModel = viewModel(repository, photoStore, editId = 3)
+        val capture = photoStore.createCaptureFile()
+
+        viewModel.onPhotoCaptured(capture)
+        viewModel.save()
+
+        assertEquals("/photos/${capture.name}", repository.medications.single().photoPath)
+        assertEquals(listOf("/photos/old.jpg"), photoStore.deleted)
+    }
+
+    @Test
+    fun `editing a missing medication shows not found`() = runTest {
+        val viewModel = viewModel(FakeMedicationRepository(), editId = 99)
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+        assertEquals(R.string.medication_not_found, (state.error as UiText.Resource).resId)
     }
 }

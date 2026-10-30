@@ -42,7 +42,7 @@ import java.util.concurrent.Executors
 @Composable
 fun CameraPreview(
     imageCapture: ImageCapture,
-    onTextRecognized: (String) -> Unit,
+    onTextRecognized: (RecognizedText) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (LocalInspectionMode.current) {

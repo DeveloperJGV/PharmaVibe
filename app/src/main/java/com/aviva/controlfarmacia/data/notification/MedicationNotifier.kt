@@ -12,6 +12,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.aviva.controlfarmacia.MainActivity
 import com.aviva.controlfarmacia.R
+import com.aviva.controlfarmacia.data.mapper.toStorageString
 import com.aviva.controlfarmacia.data.reminder.ReminderActionReceiver
 import com.aviva.controlfarmacia.domain.model.Medication
 import com.aviva.controlfarmacia.ui.common.labelRes
@@ -46,29 +47,34 @@ class MedicationNotifier @Inject constructor(
 
     fun showExpirationSummary(expired: List<Medication>, expiringSoon: List<Medication>) {
         if (expired.isNotEmpty()) {
-            val names = expired.joinToString { it.name }
             notify(
                 id = NotificationIds.EXPIRED,
                 channel = CHANNEL_EXPIRATION,
                 title = context.getString(R.string.notification_expired_title),
-                text = context.resources.getQuantityString(
-                    R.plurals.notification_expired_text, expired.size, expired.size, names
-                ),
+                text = quantityText(R.plurals.notification_expired_text, expired),
                 category = NotificationCompat.CATEGORY_REMINDER
             )
         }
         if (expiringSoon.isNotEmpty()) {
-            val names = expiringSoon.joinToString { it.name }
             notify(
                 id = NotificationIds.EXPIRING_SOON,
                 channel = CHANNEL_EXPIRATION,
                 title = context.getString(R.string.notification_expiring_title),
-                text = context.resources.getQuantityString(
-                    R.plurals.notification_expiring_text, expiringSoon.size, expiringSoon.size, names
-                ),
+                text = quantityText(R.plurals.notification_expiring_text, expiringSoon),
                 category = NotificationCompat.CATEGORY_REMINDER
             )
         }
+    }
+
+    fun showLowStock(lowStock: List<Medication>) {
+        if (lowStock.isEmpty()) return
+        notify(
+            id = NotificationIds.LOW_STOCK,
+            channel = CHANNEL_EXPIRATION,
+            title = context.getString(R.string.notification_low_stock_title),
+            text = quantityText(R.plurals.notification_low_stock_text, lowStock),
+            category = NotificationCompat.CATEGORY_REMINDER
+        )
     }
 
     fun showIntakeReminder(medication: Medication, time: LocalTime, index: Int) {
@@ -88,6 +94,8 @@ class MedicationNotifier @Inject constructor(
         val markTakenIntent = Intent(context, ReminderActionReceiver::class.java).apply {
             action = ReminderActionReceiver.ACTION_MARK_TAKEN
             putExtra(ReminderActionReceiver.EXTRA_NOTIFICATION_ID, id)
+            putExtra(ReminderActionReceiver.EXTRA_MEDICATION_ID, medication.id)
+            putExtra(ReminderActionReceiver.EXTRA_TIME, time.toStorageString())
         }
         val markTaken = NotificationCompat.Action.Builder(
             R.drawable.ic_notification,
@@ -106,6 +114,11 @@ class MedicationNotifier @Inject constructor(
     }
 
     fun cancel(id: Int) = manager.cancel(id)
+
+    private fun quantityText(pluralsRes: Int, medications: List<Medication>): String =
+        context.resources.getQuantityString(
+            pluralsRes, medications.size, medications.size, medications.joinToString { it.name }
+        )
 
     private fun notify(
         id: Int,

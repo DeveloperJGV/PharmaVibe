@@ -26,17 +26,19 @@ PharmaVibe (ControlFarmacia) keeps track of a home pharmacy. Register a medicati
 Taken on a Pixel 9a emulator (Android 17); the "box" in the photos is the emulator's virtual scene.
 
 ## Key Features
-* **Camera registration:** take a photo of the packaging; ML Kit text recognition fills in the medication name live.
-* **Inventory dashboard:** totals, expiring-this-month and expired counts, plus a searchable grid with photos.
-* **Expiration alerts:** a daily WorkManager job notifies about expired and soon-to-expire medications.
-* **Treatment reminders:** exact alarms at the times you choose, re-armed after reboots, time changes and app updates, with a "mark as taken" action.
+* **Camera registration:** take a photo of the packaging; ML Kit text recognition fills in the medication name and, when the box shows one, the expiration date ("EXP 03/2028", "CAD MAR 28", "Vence 2028-03"…).
+* **Inventory dashboard:** totals, expiring-this-month, expired, running-low and doses-taken-today counts, plus a searchable grid with photos, filters (in treatment, expiring, running low, per patient) and sorting.
+* **Edit anything later:** every field, including the photo, can be changed from the detail screen.
+* **Expiration and stock alerts:** a daily WorkManager job notifies about expired, soon-to-expire and almost-finished medications.
+* **Treatment reminders:** exact alarms at the times you choose, re-armed after reboots, time changes and app updates. If Android is not allowing exact alarms, the app says so and links to the setting.
+* **Dose log:** "Mark as taken" on the notification or "Taken now" on the detail screen records the dose and consumes one unit from the stock you track.
 * **English and Spanish** UI.
 
 ## Architecture
 
 ```
-domain/      Medication model, ExpiryStatus, repository/scheduler/photo-store interfaces (pure Kotlin)
-data/        Room (entity, DAO, mapper), AlarmManager scheduler and receivers, notifications, WorkManager, photo storage
+domain/      Medication and Intake models, ExpiryStatus, ExpiryDateParser (OCR), repository/scheduler/photo-store interfaces (pure Kotlin)
+data/        Room (entities, DAOs, migrations, mapper), AlarmManager scheduler and receivers, notifications, WorkManager, photo storage
 di/          Hilt modules (database, bindings, Clock)
 ui/          Compose screens + ViewModels: dashboard, home, registration, detail; camera + OCR analyzer; theme
 ```

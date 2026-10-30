@@ -25,15 +25,21 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -58,6 +64,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -68,19 +75,39 @@ import coil3.compose.AsyncImage
 import com.aviva.controlfarmacia.R
 import com.aviva.controlfarmacia.domain.model.Dosage
 import com.aviva.controlfarmacia.domain.model.DosageUnit
+import com.aviva.controlfarmacia.domain.model.Intake
 import com.aviva.controlfarmacia.domain.model.Medication
 import com.aviva.controlfarmacia.domain.model.PatientCategory
+import com.aviva.controlfarmacia.ui.common.ExactAlarmPermissionState
 import com.aviva.controlfarmacia.ui.common.label
+import com.aviva.controlfarmacia.ui.common.rememberExactAlarmPermissionState
 import com.aviva.controlfarmacia.ui.common.rememberNotificationPermissionRequest
 import com.aviva.controlfarmacia.ui.common.toDisplayString
 import com.aviva.controlfarmacia.ui.theme.ControlFarmaciaTheme
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+
+data class DetailActions(
+    val onNavigateBack: () -> Unit = {},
+    val onEdit: () -> Unit = {},
+    val onDelete: () -> Unit = {},
+    val onSetInTreatment: (Boolean) -> Unit = {},
+    val onAddReminderTime: (LocalTime) -> Unit = {},
+    val onRemoveReminderTime: (LocalTime) -> Unit = {},
+    val onClearReminderTimes: () -> Unit = {},
+    val onRecordIntake: () -> Unit = {},
+    val onDeleteIntake: (Intake) -> Unit = {}
+)
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun SharedTransitionScope.MedicationDetailScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToEdit: (Long) -> Unit,
     animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: MedicationDetailViewModel = hiltViewModel()
 ) {
@@ -92,12 +119,18 @@ fun SharedTransitionScope.MedicationDetailScreen(
 
     MedicationDetailContent(
         uiState = uiState,
-        onNavigateBack = onNavigateBack,
-        onDelete = viewModel::delete,
-        onSetInTreatment = viewModel::setInTreatment,
-        onAddReminderTime = viewModel::addReminderTime,
-        onRemoveReminderTime = viewModel::removeReminderTime,
-        onClearReminderTimes = viewModel::clearReminderTimes,
+        actions = DetailActions(
+            onNavigateBack = onNavigateBack,
+            onEdit = { onNavigateToEdit(viewModel.medicationId) },
+            onDelete = viewModel::delete,
+            onSetInTreatment = viewModel::setInTreatment,
+            onAddReminderTime = viewModel::addReminderTime,
+            onRemoveReminderTime = viewModel::removeReminderTime,
+            onClearReminderTimes = viewModel::clearReminderTimes,
+            onRecordIntake = viewModel::recordIntake,
+            onDeleteIntake = viewModel::deleteIntake
+        ),
+        exactAlarmPermission = rememberExactAlarmPermissionState(),
         sharedTransitionScope = this,
         animatedVisibilityScope = animatedVisibilityScope
     )
@@ -107,12 +140,8 @@ fun SharedTransitionScope.MedicationDetailScreen(
 @Composable
 private fun MedicationDetailContent(
     uiState: DetailUiState,
-    onNavigateBack: () -> Unit,
-    onDelete: () -> Unit,
-    onSetInTreatment: (Boolean) -> Unit,
-    onAddReminderTime: (LocalTime) -> Unit,
-    onRemoveReminderTime: (LocalTime) -> Unit,
-    onClearReminderTimes: () -> Unit,
+    actions: DetailActions,
+    exactAlarmPermission: ExactAlarmPermissionState,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier
@@ -125,12 +154,15 @@ private fun MedicationDetailContent(
             TopAppBar(
                 title = { Text(stringResource(R.string.details_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = actions.onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
                     if (uiState.medication != null) {
+                        IconButton(onClick = actions.onEdit) {
+                            Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit))
+                        }
                         IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete))
                         }
@@ -161,10 +193,10 @@ private fun MedicationDetailContent(
 
             else -> MedicationDetails(
                 medication = medication,
-                onSetInTreatment = onSetInTreatment,
-                onAddReminderTime = onAddReminderTime,
-                onRemoveReminderTime = onRemoveReminderTime,
-                onClearReminderTimes = onClearReminderTimes,
+                recentIntakes = uiState.recentIntakes,
+                intakesToday = uiState.intakesToday,
+                actions = actions,
+                exactAlarmPermission = exactAlarmPermission,
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
                 modifier = Modifier
@@ -182,7 +214,7 @@ private fun MedicationDetailContent(
             confirmLabel = stringResource(R.string.delete),
             onConfirm = {
                 showDeleteDialog = false
-                onDelete()
+                actions.onDelete()
             },
             onDismiss = { showDeleteDialog = false }
         )
@@ -193,10 +225,10 @@ private fun MedicationDetailContent(
 @Composable
 private fun MedicationDetails(
     medication: Medication,
-    onSetInTreatment: (Boolean) -> Unit,
-    onAddReminderTime: (LocalTime) -> Unit,
-    onRemoveReminderTime: (LocalTime) -> Unit,
-    onClearReminderTimes: () -> Unit,
+    recentIntakes: List<Intake>,
+    intakesToday: Int,
+    actions: DetailActions,
+    exactAlarmPermission: ExactAlarmPermissionState,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier
@@ -277,14 +309,36 @@ private fun MedicationDetails(
                 )
             }
 
+            medication.quantity?.let { quantity ->
+                DetailItem(
+                    icon = Icons.Default.Inventory,
+                    label = stringResource(R.string.quantity_detail_label),
+                    value = if (medication.isLowStock) {
+                        stringResource(R.string.quantity_low_value, quantity)
+                    } else {
+                        quantity.toString()
+                    }
+                )
+            }
+
             HorizontalDivider()
 
             TreatmentSection(
                 medication = medication,
-                onSetInTreatment = onSetInTreatment,
-                onAddReminderTime = onAddReminderTime,
-                onRemoveReminderTime = onRemoveReminderTime,
-                onClearReminderTimes = onClearReminderTimes
+                exactAlarmPermission = exactAlarmPermission,
+                onSetInTreatment = actions.onSetInTreatment,
+                onAddReminderTime = actions.onAddReminderTime,
+                onRemoveReminderTime = actions.onRemoveReminderTime,
+                onClearReminderTimes = actions.onClearReminderTimes
+            )
+
+            HorizontalDivider()
+
+            IntakeSection(
+                recentIntakes = recentIntakes,
+                intakesToday = intakesToday,
+                onRecordIntake = actions.onRecordIntake,
+                onDeleteIntake = actions.onDeleteIntake
             )
         }
     }
@@ -294,6 +348,7 @@ private fun MedicationDetails(
 @Composable
 private fun TreatmentSection(
     medication: Medication,
+    exactAlarmPermission: ExactAlarmPermissionState,
     onSetInTreatment: (Boolean) -> Unit,
     onAddReminderTime: (LocalTime) -> Unit,
     onRemoveReminderTime: (LocalTime) -> Unit,
@@ -338,6 +393,10 @@ private fun TreatmentSection(
 
     AnimatedVisibility(visible = medication.isInTreatment) {
         Column {
+            if (!exactAlarmPermission.isGranted) {
+                ExactAlarmBanner(onOpenSettings = exactAlarmPermission.openSettings)
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -403,6 +462,109 @@ private fun TreatmentSection(
             },
             text = { TimePicker(state = timePickerState) }
         )
+    }
+}
+
+@Composable
+private fun ExactAlarmBanner(onOpenSettings: () -> Unit) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                stringResource(R.string.exact_alarm_banner_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onTertiaryContainer
+            )
+            Text(
+                stringResource(R.string.exact_alarm_banner_text),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onTertiaryContainer
+            )
+            FilledTonalButton(onClick = onOpenSettings, modifier = Modifier.align(Alignment.End)) {
+                Text(stringResource(R.string.exact_alarm_banner_action))
+            }
+        }
+    }
+}
+
+@Composable
+private fun IntakeSection(
+    recentIntakes: List<Intake>,
+    intakesToday: Int,
+    onRecordIntake: () -> Unit,
+    onDeleteIntake: (Intake) -> Unit
+) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    stringResource(R.string.intakes_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    pluralStringResource(R.plurals.intakes_today_summary, intakesToday, intakesToday),
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+            FilledTonalButton(onClick = onRecordIntake) {
+                Icon(Icons.Default.Check, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.record_intake))
+            }
+        }
+
+        if (recentIntakes.isEmpty()) {
+            Text(
+                stringResource(R.string.no_intakes_yet),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 12.dp)
+            )
+        }
+
+        recentIntakes.forEach { intake ->
+            IntakeRow(intake = intake, onDelete = { onDeleteIntake(intake) })
+        }
+    }
+}
+
+@Composable
+private fun IntakeRow(intake: Intake, onDelete: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(Icons.Default.Medication, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
+        Spacer(Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = intake.takenAt.format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            intake.scheduledTime?.let { scheduled ->
+                Text(
+                    text = stringResource(R.string.intake_from_reminder, scheduled.toDisplayString()),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        IconButton(onClick = onDelete) {
+            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.delete_intake))
+        }
     }
 }
 
@@ -494,34 +656,21 @@ private fun MedicationDetailPreview() {
                             patientName = "Luna",
                             isInTreatment = true,
                             reminderTimes = listOf(LocalTime.of(8, 0), LocalTime.of(20, 30)),
+                            quantity = 4,
                             expiry = YearMonth.of(2027, 12)
                         ),
+                        recentIntakes = listOf(
+                            Intake(1, 1, LocalDateTime.of(2026, 10, 30, 8, 2), LocalTime.of(8, 0))
+                        ),
+                        today = LocalDate.of(2026, 10, 30),
                         isLoading = false
                     ),
-                    onNavigateBack = {},
-                    onDelete = {},
-                    onSetInTreatment = {},
-                    onAddReminderTime = {},
-                    onRemoveReminderTime = {},
-                    onClearReminderTimes = {},
+                    actions = DetailActions(),
+                    exactAlarmPermission = ExactAlarmPermissionState(isGranted = false, openSettings = {}),
                     sharedTransitionScope = this@SharedTransitionLayout,
                     animatedVisibilityScope = this@AnimatedVisibility
                 )
             }
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun DetailItemPreview() {
-    ControlFarmaciaTheme {
-        Box(modifier = Modifier.padding(16.dp)) {
-            DetailItem(
-                icon = Icons.Default.Medication,
-                label = stringResource(R.string.expiration_date_label),
-                value = "12/2027"
-            )
         }
     }
 }

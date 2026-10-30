@@ -6,10 +6,12 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,16 +19,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DockedSearchBar
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFloatingActionButton
@@ -38,10 +46,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -59,6 +71,15 @@ import com.aviva.controlfarmacia.ui.common.label
 import com.aviva.controlfarmacia.ui.theme.ControlFarmaciaTheme
 import java.time.YearMonth
 
+data class HomeActions(
+    val onSearchQueryChange: (String) -> Unit = {},
+    val onFilterChange: (InventoryFilter) -> Unit = {},
+    val onPatientToggle: (String) -> Unit = {},
+    val onSortChange: (InventorySort) -> Unit = {},
+    val onNavigateToRegistration: () -> Unit = {},
+    val onNavigateToDetail: (Long) -> Unit = {}
+)
+
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun SharedTransitionScope.HomeScreen(
@@ -73,9 +94,14 @@ fun SharedTransitionScope.HomeScreen(
     HomeContent(
         uiState = uiState,
         searchQuery = searchQuery,
-        onSearchQueryChange = viewModel::onSearchQueryChange,
-        onNavigateToRegistration = onNavigateToRegistration,
-        onNavigateToDetail = onNavigateToDetail,
+        actions = HomeActions(
+            onSearchQueryChange = viewModel::onSearchQueryChange,
+            onFilterChange = viewModel::onFilterChange,
+            onPatientToggle = viewModel::onPatientToggle,
+            onSortChange = viewModel::onSortChange,
+            onNavigateToRegistration = onNavigateToRegistration,
+            onNavigateToDetail = onNavigateToDetail
+        ),
         animatedVisibilityScope = animatedVisibilityScope
     )
 }
@@ -85,9 +111,7 @@ fun SharedTransitionScope.HomeScreen(
 fun SharedTransitionScope.HomeContent(
     uiState: HomeUiState,
     searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
-    onNavigateToRegistration: () -> Unit,
-    onNavigateToDetail: (Long) -> Unit,
+    actions: HomeActions,
     animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier
 ) {
@@ -96,13 +120,14 @@ fun SharedTransitionScope.HomeContent(
         topBar = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 LargeTopAppBar(
-                    title = { Text(stringResource(R.string.my_pharmacy), fontWeight = FontWeight.Bold) }
+                    title = { Text(stringResource(R.string.my_pharmacy), fontWeight = FontWeight.Bold) },
+                    actions = { SortMenu(current = uiState.options.sort, onSortChange = actions.onSortChange) }
                 )
                 DockedSearchBar(
                     inputField = {
                         SearchBarDefaults.InputField(
                             query = searchQuery,
-                            onQueryChange = onSearchQueryChange,
+                            onQueryChange = actions.onSearchQueryChange,
                             onSearch = {},
                             expanded = false,
                             onExpandedChange = {},
@@ -110,11 +135,8 @@ fun SharedTransitionScope.HomeContent(
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                             trailingIcon = {
                                 if (searchQuery.isNotEmpty()) {
-                                    IconButton(onClick = { onSearchQueryChange("") }) {
-                                        Icon(
-                                            Icons.Default.Close,
-                                            contentDescription = stringResource(R.string.clear_search)
-                                        )
+                                    IconButton(onClick = { actions.onSearchQueryChange("") }) {
+                                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.clear_search))
                                     }
                                 }
                             }
@@ -125,13 +147,18 @@ fun SharedTransitionScope.HomeContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
-                        .padding(bottom = 16.dp)
                 ) {}
+                FilterRow(
+                    options = uiState.options,
+                    patients = uiState.patients,
+                    onFilterChange = actions.onFilterChange,
+                    onPatientToggle = actions.onPatientToggle
+                )
             }
         },
         floatingActionButton = {
             LargeFloatingActionButton(
-                onClick = onNavigateToRegistration,
+                onClick = actions.onNavigateToRegistration,
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             ) {
@@ -142,12 +169,11 @@ fun SharedTransitionScope.HomeContent(
         when {
             uiState.isLoading -> CenteredBox(padding) { CircularProgressIndicator() }
             uiState.medications.isEmpty() -> CenteredBox(padding) {
-                Text(
-                    text = stringResource(
-                        if (searchQuery.isBlank()) R.string.no_medications else R.string.no_search_results
-                    ),
-                    style = MaterialTheme.typography.bodyLarge
-                )
+                val message = when {
+                    searchQuery.isNotBlank() || uiState.isFiltered -> R.string.no_search_results
+                    else -> R.string.no_medications
+                }
+                Text(text = stringResource(message), style = MaterialTheme.typography.bodyLarge)
             }
             else -> LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
@@ -160,13 +186,79 @@ fun SharedTransitionScope.HomeContent(
                     MedicationCard(
                         medication = medication,
                         today = uiState.today,
-                        onClick = { onNavigateToDetail(medication.id) },
+                        onClick = { actions.onNavigateToDetail(medication.id) },
                         animatedVisibilityScope = animatedVisibilityScope
                     )
                 }
             }
         }
     }
+}
+
+@Composable
+private fun SortMenu(current: InventorySort, onSortChange: (InventorySort) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    IconButton(onClick = { expanded = true }) {
+        Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(R.string.sort))
+    }
+    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        InventorySort.entries.forEach { sort ->
+            DropdownMenuItem(
+                text = { Text(stringResource(sort.labelRes())) },
+                trailingIcon = {
+                    if (sort == current) Icon(Icons.Default.Check, contentDescription = null)
+                },
+                onClick = {
+                    onSortChange(sort)
+                    expanded = false
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun FilterRow(
+    options: InventoryOptions,
+    patients: List<String>,
+    onFilterChange: (InventoryFilter) -> Unit,
+    onPatientToggle: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        InventoryFilter.entries.forEach { filter ->
+            FilterChip(
+                selected = options.filter == filter,
+                onClick = { onFilterChange(filter) },
+                label = { Text(stringResource(filter.labelRes())) }
+            )
+        }
+        patients.forEach { patient ->
+            FilterChip(
+                selected = options.patient == patient,
+                onClick = { onPatientToggle(patient) },
+                label = { Text(patient) }
+            )
+        }
+    }
+}
+
+private fun InventoryFilter.labelRes(): Int = when (this) {
+    InventoryFilter.ALL -> R.string.filter_all
+    InventoryFilter.IN_TREATMENT -> R.string.filter_in_treatment
+    InventoryFilter.EXPIRING -> R.string.filter_expiring
+    InventoryFilter.LOW_STOCK -> R.string.filter_low_stock
+}
+
+private fun InventorySort.labelRes(): Int = when (this) {
+    InventorySort.NEWEST -> R.string.sort_newest
+    InventorySort.EXPIRY -> R.string.sort_expiry
+    InventorySort.NAME -> R.string.sort_name
 }
 
 @Composable
@@ -246,6 +338,23 @@ fun SharedTransitionScope.MedicationCard(
                         color = badgeColors.content
                     )
                 }
+
+                if (medication.isLowStock) {
+                    Surface(
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .align(Alignment.BottomStart),
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = pluralStringResource(R.plurals.low_stock_badge, medication.quantity ?: 0, medication.quantity ?: 0),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
             }
 
             Column(modifier = Modifier.padding(12.dp)) {
@@ -290,18 +399,18 @@ private fun HomeContentPreview() {
                                 id = 1,
                                 name = "Paracetamol",
                                 dosage = Dosage("500", DosageUnit.MILLIGRAM),
+                                quantity = 3,
                                 expiry = today.plusMonths(6)
                             ),
                             Medication(id = 2, name = "Ibuprofen", expiry = today),
                             Medication(id = 3, name = "Amoxicillin", patientName = "Luna", expiry = today.minusMonths(1))
                         ),
                         today = today,
-                        isLoading = false
+                        isLoading = false,
+                        patients = listOf("Luna")
                     ),
                     searchQuery = "",
-                    onSearchQueryChange = {},
-                    onNavigateToRegistration = {},
-                    onNavigateToDetail = {},
+                    actions = HomeActions(),
                     animatedVisibilityScope = this@AnimatedVisibility
                 )
             }

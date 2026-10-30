@@ -14,7 +14,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.ProductionQuantityLimits
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
@@ -116,6 +118,30 @@ fun DashboardContent(
                 )
             }
 
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                StatCard(
+                    title = stringResource(R.string.intakes_today),
+                    value = stringResource(
+                        R.string.intakes_today_value, uiState.intakesTakenToday, uiState.intakesExpectedToday
+                    ),
+                    icon = Icons.Default.Medication,
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.weight(1f)
+                )
+                StatCard(
+                    title = stringResource(R.string.low_stock),
+                    value = uiState.lowStock.toString(),
+                    icon = Icons.Default.ProductionQuantityLimits,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
@@ -175,6 +201,9 @@ private fun DashboardScreenPreview() {
                 totalMedications = 24,
                 expiringThisMonth = 3,
                 expired = 1,
+                lowStock = 2,
+                intakesTakenToday = 1,
+                intakesExpectedToday = 3,
                 isLoading = false
             ),
             onNavigateToList = {}

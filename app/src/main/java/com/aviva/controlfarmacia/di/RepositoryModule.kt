@@ -2,9 +2,11 @@ package com.aviva.controlfarmacia.di
 
 import com.aviva.controlfarmacia.data.media.LocalMedicationPhotoStore
 import com.aviva.controlfarmacia.data.reminder.AlarmReminderScheduler
+import com.aviva.controlfarmacia.data.repository.IntakeRepositoryImpl
 import com.aviva.controlfarmacia.data.repository.MedicationRepositoryImpl
 import com.aviva.controlfarmacia.domain.media.MedicationPhotoStore
 import com.aviva.controlfarmacia.domain.reminder.ReminderScheduler
+import com.aviva.controlfarmacia.domain.repository.IntakeRepository
 import com.aviva.controlfarmacia.domain.repository.MedicationRepository
 import dagger.Binds
 import dagger.Module
@@ -18,6 +20,9 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindMedicationRepository(impl: MedicationRepositoryImpl): MedicationRepository
+
+    @Binds
+    abstract fun bindIntakeRepository(impl: IntakeRepositoryImpl): IntakeRepository
 
     @Binds
     abstract fun bindMedicationPhotoStore(impl: LocalMedicationPhotoStore): MedicationPhotoStore
