@@ -48,12 +48,41 @@ ui/          Compose screens + ViewModels: dashboard, home, registration, detail
 | **Concurrency** | Kotlin Coroutines & Flow |
 | **Tests** | JUnit 4, kotlinx-coroutines-test |
 
-## Building
+## Permissions
+
+| Permission | Why |
+| :--- | :--- |
+| `CAMERA` | Photo of the packaging and live OCR. Declared as optional hardware. |
+| `POST_NOTIFICATIONS` | Expiration alerts and intake reminders (asked on first launch and when a treatment is enabled). |
+| `SCHEDULE_EXACT_ALARM` | Reminders at the exact minute. If the user does not grant it, reminders fall back to inexact alarms. |
+| `RECEIVE_BOOT_COMPLETED` | Re-arm the reminders after a reboot. |
+
+No network access: everything (OCR included) runs on the device.
+
+## What the review changed (2026-10-30)
+
+The generated code looked finished but shipped with real bugs: the camera kept running after leaving the camera view, deleted medications left their photos behind, reminder alarms drifted and were lost on reboot, notification ids collided and any schema change wiped the database. The review fixed those, moved the Room entity out of the UI behind a small domain model, put every string into resources (with a Spanish translation), removed dead code and unused permissions, added unit tests, cleaned lint to zero and upgraded the whole toolchain (Gradle 9.8, AGP 9.5 with built-in Kotlin 2.4, SDK 37, Compose BOM 2026.09, Room 2.8, Hilt 2.60, Coil 3). The full list of findings, decisions and open ideas lives in [`PLAN.md`](PLAN.md) (Spanish).
+
+Everything was verified on a Pixel 9a emulator running Android 17: registration with OCR, a real reminder alarm firing at the scheduled minute, "mark as taken", rescheduling for the next day and deletion with no orphan alarms or photos.
+
+## Building and testing
 
 ```
 ./gradlew :app:assembleDebug       # debug APK
-./gradlew :app:testDebugUnitTest   # unit tests
-./gradlew :app:lintDebug           # lint report
+./gradlew :app:assembleRelease     # release APK (R8 + resource shrinking)
+./gradlew :app:testDebugUnitTest   # 25 unit tests (domain, mapper, ids, view models)
+./gradlew :app:lintDebug           # lint report (currently clean)
 ```
 
 Requires JDK 17 and Android SDK 37 (Gradle 9.8, AGP 9.5).
+
+To try the reminders on an emulator without waiting for the exact-alarm permission prompt:
+
+```
+adb shell appops set com.aviva.controlfarmacia SCHEDULE_EXACT_ALARM allow
+adb shell dumpsys alarm | grep -A2 action.REMINDER   # scheduled reminders
+```
+
+## Branches
+
+`main` and `ocr-pivot` point to the same reviewed code. The barcode-scanning version that preceded the OCR pivot is still in the history before commit `7767893` ("Auto read the medicine").
