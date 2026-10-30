@@ -13,6 +13,18 @@ The initial architecture, UI and feature set were generated via prompting with t
 ## Project Brief
 PharmaVibe (ControlFarmacia) keeps track of a home pharmacy. Register a medication by pointing the camera at the box (the name is read with on-device OCR), add the dosage, who it is for (a person or a pet) and the expiration month. The app warns before medications expire and, while a medication is "in treatment", reminds you of each intake with daily alarms.
 
+## Screenshots
+
+| Dashboard | Inventory | Registration |
+| :---: | :---: | :---: |
+| ![Dashboard with totals](docs/screenshots/dashboard.png) | ![Searchable inventory grid](docs/screenshots/inventory.png) | ![Registration form](docs/screenshots/registration.png) |
+
+| Camera + live OCR | Detail with treatment schedule | Intake reminder |
+| :---: | :---: | :---: |
+| ![Camera view with scanning frame](docs/screenshots/camera-ocr.jpg) | ![Medication detail with reminders](docs/screenshots/detail-treatment.png) | ![Reminder notification](docs/screenshots/notification.png) |
+
+Taken on a Pixel 9a emulator (Android 17); the "box" in the photos is the emulator's virtual scene.
+
 ## Key Features
 * **Camera registration:** take a photo of the packaging; ML Kit text recognition fills in the medication name live.
 * **Inventory dashboard:** totals, expiring-this-month and expired counts, plus a searchable grid with photos.

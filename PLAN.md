@@ -36,6 +36,7 @@ cambiar cómo se ve la app, más actualización de todo el toolchain.
 - [x] Cálculo de vencimiento en un solo lugar (`Medication.expiryStatus`, probado); `Clock` inyectado.
 - [x] Todos los textos en `strings.xml` (+ traducción `values-es`), plurales para notificaciones.
 - [x] Código muerto eliminado: `BarcodeAnalyzer` + dependencia, `WorkerModule`, `onDosageFormChange`, `resetError`, `buildConfig`, `colors.xml`, `placeholder.png`.
+- [x] Atrás del sistema con la cámara abierta cierra la cámara en vez de salir del registro (`BackHandler`).
 - [x] Deprecaciones: sin `statusBarColor`, `DockedSearchBar` con `InputField`, `AutoMirrored.ArrowBack`, `ExposedDropdownMenuAnchorType`, `hiltViewModel` del paquete nuevo.
 - [x] Sin `!!`, sin `catch (Exception)` genéricos en ViewModels, sin `printStackTrace`.
 - [x] Permisos: quitados `INTERNET`, `WAKE_LOCK`, `VIBRATE` (vibración vía `LocalHapticFeedback`); `uses-feature camera required=false`.

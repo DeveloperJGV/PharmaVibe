@@ -1,6 +1,7 @@
 package com.aviva.controlfarmacia.ui.registration
 
 import android.Manifest
+import androidx.activity.compose.BackHandler
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.compose.animation.AnimatedVisibility
@@ -154,6 +155,8 @@ fun RegistrationContent(
     val openCamera = {
         if (isCameraPermissionGranted) showCamera = true else actions.onRequestCameraPermission()
     }
+    // System back closes the camera overlay first instead of leaving the whole screen.
+    BackHandler(enabled = showCamera) { showCamera = false }
 
     Scaffold(
         modifier = modifier,
