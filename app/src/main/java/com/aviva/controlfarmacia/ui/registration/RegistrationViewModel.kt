@@ -1,12 +1,16 @@
 package com.aviva.controlfarmacia.ui.registration
 
+import android.database.SQLException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aviva.controlfarmacia.R
-import com.aviva.controlfarmacia.data.local.entity.MedicationEntity
-import com.aviva.controlfarmacia.data.repository.MedicationRepository
-import com.aviva.controlfarmacia.util.LocalMediaManager
-import com.aviva.controlfarmacia.util.UiText
+import com.aviva.controlfarmacia.domain.media.MedicationPhotoStore
+import com.aviva.controlfarmacia.domain.model.Dosage
+import com.aviva.controlfarmacia.domain.model.DosageUnit
+import com.aviva.controlfarmacia.domain.model.Medication
+import com.aviva.controlfarmacia.domain.model.PatientCategory
+import com.aviva.controlfarmacia.domain.repository.MedicationRepository
+import com.aviva.controlfarmacia.ui.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,16 +18,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
-import java.util.Calendar
+import java.io.IOException
+import java.time.Clock
+import java.time.YearMonth
 import javax.inject.Inject
 
 data class RegistrationUiState(
     val name: String = "",
-    val dosageForm: String = "Tablet",
-    val expiryMonth: Int = Calendar.getInstance().get(Calendar.MONTH) + 1,
-    val expiryYear: Int = Calendar.getInstance().get(Calendar.YEAR),
-    val tempPhotoFile: File? = null,
-    val capturedPhotoPath: String? = null,
+    val dosageValue: String = "",
+    val dosageUnit: DosageUnit = DosageUnit.MILLIGRAM,
+    val patientCategory: PatientCategory = PatientCategory.HUMAN,
+    val patientName: String = "",
+    val expiry: YearMonth = YearMonth.now(),
+    val capturedPhoto: File? = null,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
     val error: UiText? = null
@@ -32,86 +39,86 @@ data class RegistrationUiState(
 @HiltViewModel
 class RegistrationViewModel @Inject constructor(
     private val repository: MedicationRepository,
-    private val mediaManager: LocalMediaManager
+    private val photoStore: MedicationPhotoStore,
+    clock: Clock
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(RegistrationUiState())
+    private val today: YearMonth = YearMonth.now(clock)
+
+    private val _uiState = MutableStateFlow(RegistrationUiState(expiry = today))
     val uiState: StateFlow<RegistrationUiState> = _uiState.asStateFlow()
 
-    fun onNameChange(name: String) {
-        _uiState.update { it.copy(name = name) }
+    fun createCaptureFile(): File = photoStore.createCaptureFile()
+
+    fun onNameChange(name: String) = _uiState.update { it.copy(name = name, error = null) }
+
+    fun onTextRecognized(text: String) = _uiState.update { it.copy(name = text, error = null) }
+
+    fun onDosageValueChange(value: String) = _uiState.update { it.copy(dosageValue = value) }
+
+    fun onDosageUnitChange(unit: DosageUnit) = _uiState.update { it.copy(dosageUnit = unit) }
+
+    fun onPatientCategoryChange(category: PatientCategory) =
+        _uiState.update { it.copy(patientCategory = category) }
+
+    fun onPatientNameChange(name: String) = _uiState.update { it.copy(patientName = name) }
+
+    fun onExpiryMonthChange(month: Int) = _uiState.update { state ->
+        state.copy(expiry = YearMonth.of(state.expiry.year, month).coerceAtLeast(today))
     }
 
-    fun onDosageFormChange(dosageForm: String) {
-        _uiState.update { it.copy(dosageForm = dosageForm) }
+    fun onExpiryYearChange(year: Int) = _uiState.update { state ->
+        state.copy(expiry = YearMonth.of(year, state.expiry.monthValue).coerceAtLeast(today))
     }
 
-    fun onTextRecognized(text: String) {
-        if (_uiState.value.name.isBlank() || _uiState.value.name != text) {
-             _uiState.update { it.copy(name = text) }
-        }
+    fun onPhotoCaptured(file: File) = _uiState.update { state ->
+        state.capturedPhoto?.takeIf { it != file }?.delete()
+        state.copy(capturedPhoto = file, error = null)
     }
 
-    fun onExpiryMonthChange(month: Int) {
-        _uiState.update { it.copy(expiryMonth = month) }
-    }
+    fun onPhotoCaptureFailed() =
+        _uiState.update { it.copy(error = UiText.Resource(R.string.error_capture_failed)) }
 
-    fun onExpiryYearChange(year: Int) {
-        val currentCalendar = Calendar.getInstance()
-        val currentYear = currentCalendar.get(Calendar.YEAR)
-        val currentMonth = currentCalendar.get(Calendar.MONTH) + 1
-
-        _uiState.update { state ->
-            val newMonth = if (year == currentYear && state.expiryMonth < currentMonth) {
-                currentMonth
-            } else {
-                state.expiryMonth
-            }
-            state.copy(expiryYear = year, expiryMonth = newMonth)
-        }
-    }
-
-    fun onPhotoCaptured(file: File) {
-        _uiState.update { it.copy(tempPhotoFile = file, capturedPhotoPath = file.absolutePath) }
-    }
-
-    fun saveMedication() {
+    fun save() {
         val state = _uiState.value
-        if (state.name.isBlank()) {
-            _uiState.update { it.copy(error = UiText.StringResource(R.string.error_name_required)) }
+        val name = state.name.trim()
+        if (name.isEmpty()) {
+            _uiState.update { it.copy(error = UiText.Resource(R.string.error_name_required)) }
             return
         }
+        if (state.isSaving) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, error = null) }
             try {
-                val finalPhotoPath = state.tempPhotoFile?.let { 
-                    mediaManager.saveCapturedImage(it)
-                }
-
-                val medication = MedicationEntity(
-                    name = state.name,
-                    dosageForm = state.dosageForm,
-                    photoPath = finalPhotoPath,
-                    expiryMonth = state.expiryMonth,
-                    expiryYear = state.expiryYear
+                val photoPath = state.capturedPhoto?.let { photoStore.persist(it) }
+                repository.insert(
+                    Medication(
+                        name = name,
+                        dosage = state.dosageValue.trim()
+                            .takeIf { it.isNotEmpty() }
+                            ?.let { Dosage(it, state.dosageUnit) },
+                        patientCategory = state.patientCategory,
+                        patientName = state.patientName.trim().takeIf { it.isNotEmpty() },
+                        photoPath = photoPath,
+                        expiry = state.expiry
+                    )
                 )
-                
-                repository.insertMedication(medication)
                 _uiState.update { it.copy(isSaving = false, saveSuccess = true) }
-            } catch (e: Exception) {
-                _uiState.update { 
-                    it.copy(
-                        isSaving = false, 
-                        error = e.message?.let { msg -> UiText.DynamicString(msg) } 
-                            ?: UiText.StringResource(R.string.error_failed_to_save)
-                    ) 
+            } catch (e: IOException) {
+                _uiState.update {
+                    it.copy(isSaving = false, error = UiText.Resource(R.string.error_photo_failed))
+                }
+            } catch (e: SQLException) {
+                _uiState.update {
+                    it.copy(isSaving = false, error = UiText.Resource(R.string.error_failed_to_save))
                 }
             }
         }
     }
-    
-    fun resetError() {
-        _uiState.update { it.copy(error = null) }
+
+    override fun onCleared() {
+        // A capture that was never saved is just a cache file.
+        _uiState.value.capturedPhoto?.takeIf { !_uiState.value.saveSuccess }?.delete()
     }
 }

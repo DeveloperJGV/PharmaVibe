@@ -9,26 +9,28 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.aviva.controlfarmacia.R
 import com.aviva.controlfarmacia.ui.dashboard.DashboardScreen
 import com.aviva.controlfarmacia.ui.detail.MedicationDetailScreen
 import com.aviva.controlfarmacia.ui.home.HomeScreen
 import com.aviva.controlfarmacia.ui.registration.RegistrationScreen
 import com.aviva.controlfarmacia.ui.theme.ControlFarmaciaTheme
+import kotlinx.serialization.Serializable
 
-sealed class Screen(val route: String) {
-    object Dashboard : Screen("dashboard")
-    object Home : Screen("home")
-    object Registration : Screen("registration")
-    object Detail : Screen("detail/{medicationId}") {
-        fun createRoute(medicationId: Long) = "detail/$medicationId"
-    }
-}
+@Serializable
+data object DashboardRoute
+
+@Serializable
+data object HomeRoute
+
+@Serializable
+data object RegistrationRoute
+
+@Serializable
+data class DetailRoute(val medicationId: Long)
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -37,24 +39,25 @@ fun NavGraph(navController: NavHostController) {
         navController = navController,
         dashboardScreen = {
             DashboardScreen(
-                onNavigateToList = { navController.navigate(Screen.Home.route) }
+                onNavigateToList = { navController.navigate(HomeRoute) { launchSingleTop = true } }
             )
         },
         homeScreen = { animatedVisibilityScope ->
             HomeScreen(
-                onNavigateToRegistration = { navController.navigate(Screen.Registration.route) },
-                onNavigateToDetail = { id: Long -> navController.navigate(Screen.Detail.createRoute(id)) },
+                onNavigateToRegistration = {
+                    navController.navigate(RegistrationRoute) { launchSingleTop = true }
+                },
+                onNavigateToDetail = { id ->
+                    navController.navigate(DetailRoute(id)) { launchSingleTop = true }
+                },
                 animatedVisibilityScope = animatedVisibilityScope
             )
         },
         registrationScreen = {
-            RegistrationScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
+            RegistrationScreen(onNavigateBack = { navController.popBackStack() })
         },
-        detailScreen = { medicationId, animatedVisibilityScope ->
+        detailScreen = { animatedVisibilityScope ->
             MedicationDetailScreen(
-                medicationId = medicationId,
                 onNavigateBack = { navController.popBackStack() },
                 animatedVisibilityScope = animatedVisibilityScope
             )
@@ -69,29 +72,14 @@ fun NavGraphContent(
     dashboardScreen: @Composable () -> Unit,
     homeScreen: @Composable SharedTransitionScope.(AnimatedVisibilityScope) -> Unit,
     registrationScreen: @Composable () -> Unit,
-    detailScreen: @Composable SharedTransitionScope.(Long, AnimatedVisibilityScope) -> Unit
+    detailScreen: @Composable SharedTransitionScope.(AnimatedVisibilityScope) -> Unit
 ) {
     SharedTransitionLayout {
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Dashboard.route
-        ) {
-            composable(Screen.Dashboard.route) {
-                dashboardScreen()
-            }
-            composable(Screen.Home.route) {
-                homeScreen(this@composable)
-            }
-            composable(Screen.Registration.route) {
-                registrationScreen()
-            }
-            composable(
-                route = Screen.Detail.route,
-                arguments = listOf(navArgument("medicationId") { type = NavType.LongType })
-            ) { backStackEntry ->
-                val medicationId = backStackEntry.arguments?.getLong("medicationId") ?: return@composable
-                detailScreen(medicationId, this@composable)
-            }
+        NavHost(navController = navController, startDestination = DashboardRoute) {
+            composable<DashboardRoute> { dashboardScreen() }
+            composable<HomeRoute> { homeScreen(this@composable) }
+            composable<RegistrationRoute> { registrationScreen() }
+            composable<DetailRoute> { detailScreen(this@composable) }
         }
     }
 }
@@ -99,15 +87,14 @@ fun NavGraphContent(
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Preview(showBackground = true)
 @Composable
-fun NavGraphPreview() {
+private fun NavGraphPreview() {
     ControlFarmaciaTheme {
-        val navController = rememberNavController()
         NavGraphContent(
-            navController = navController,
+            navController = rememberNavController(),
             dashboardScreen = { Text(stringResource(R.string.preview_dashboard_screen)) },
             homeScreen = { Text(stringResource(R.string.preview_home_screen)) },
             registrationScreen = { Text(stringResource(R.string.preview_registration_screen)) },
-            detailScreen = { id, _ -> Text(stringResource(R.string.preview_detail_screen_format, id)) }
+            detailScreen = { Text(stringResource(R.string.preview_detail_screen)) }
         )
     }
 }

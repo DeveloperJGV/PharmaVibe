@@ -17,16 +17,12 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
-        return Room.databaseBuilder(
-            context,
-            AppDatabase::class.java,
-            "control_farmacia_db"
-        ).fallbackToDestructiveMigration().build()
-    }
+    fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
+        Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.NAME)
+            // Versions 1 and 2 never left development; anything newer needs a real migration.
+            .fallbackToDestructiveMigrationFrom(dropAllTables = true, 1, 2)
+            .build()
 
     @Provides
-    fun provideMedicationDao(database: AppDatabase): MedicationDao {
-        return database.medicationDao()
-    }
+    fun provideMedicationDao(database: AppDatabase): MedicationDao = database.medicationDao()
 }

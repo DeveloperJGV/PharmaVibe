@@ -1,37 +1,105 @@
 <resources>
     <string name="app_name">PharmaVibe</string>
-    <string name="registration_title">Register Medication</string>
+
+    <!-- Common -->
     <string name="back">Back</string>
-    <string name="capture">Capture</string>
-    <string name="close_camera">Close Camera</string>
-    <string name="medication_photo_description">Medication Photo</string>
-    <string name="retake">Retake</string>
-    <string name="take_photo_and_scan">Take Photo &amp; Scan</string>
-    <string name="medication_name_label">Medication Name</string>
-    <string name="month_label">Month</string>
-    <string name="year_label">Year</string>
-    <string name="save_medication">Save Medication</string>
-    <string name="details_title">Details</string>
+    <string name="cancel">Cancel</string>
+    <string name="add">Add</string>
+    <string name="clear">Clear</string>
     <string name="delete">Delete</string>
-    <string name="expiration_date_label">Expiration Date</string>
-    <string name="expiry_date_format">%1$02d/%2$d</string>
-    <string name="camera_preview_placeholder">Camera Preview Placeholder</string>
+
+    <!-- Dashboard -->
     <string name="inventory_overview">Inventory Overview</string>
     <string name="total_medications">Total Medications</string>
     <string name="expiring_soon">Expiring Soon</string>
     <string name="expired">Expired</string>
     <string name="view_full_inventory">View Full Inventory</string>
+
+    <!-- Inventory -->
     <string name="my_pharmacy">My Pharmacy</string>
-    <string name="search">Search</string>
+    <string name="search_placeholder">Search meds or patients…</string>
+    <string name="clear_search">Clear search</string>
     <string name="add_medication">Add Medication</string>
     <string name="no_medications">No medications registered yet.</string>
+    <string name="no_search_results">No medications match your search.</string>
+    <string name="expiry_date_format">%1$02d/%2$d</string>
+    <string name="dosage_format">%1$s %2$s</string>
+
+    <!-- Registration -->
+    <string name="registration_title">Register Medication</string>
+    <string name="capture">Capture</string>
+    <string name="close_camera">Close Camera</string>
+    <string name="camera_preview_placeholder">Camera Preview Placeholder</string>
+    <string name="medication_photo_description">Medication Photo</string>
+    <string name="retake">Retake</string>
+    <string name="take_photo_and_scan">Take Photo &amp; Scan</string>
+    <string name="medication_name_label">Medication Name</string>
+    <string name="dosage_label">Dosage</string>
+    <string name="dosage_unit_label">Unit</string>
+    <string name="patient_category_human">Human</string>
+    <string name="patient_category_pet">Pet</string>
+    <string name="patient_name_label">Patient Name (Optional)</string>
+    <string name="pet_name_label">Pet Name</string>
+    <string name="month_label">Month</string>
+    <string name="year_label">Year</string>
+    <string name="save_medication">Save Medication</string>
+    <string name="error_name_required">Please enter the medication name</string>
+    <string name="error_failed_to_save">The medication could not be saved</string>
+    <string name="error_photo_failed">The photo could not be saved. Try taking it again.</string>
+    <string name="error_capture_failed">The camera could not take the photo</string>
+
+    <!-- Dosage units -->
+    <string name="unit_mg">mg</string>
+    <string name="unit_ml">ml</string>
+    <string name="unit_iu">IU</string>
+    <string name="unit_g">g</string>
+    <string name="unit_capsules">capsules</string>
+    <string name="unit_tablets">tablets</string>
+    <string name="unit_drops">drops</string>
+    <string name="unit_puffs">puffs</string>
+    <string name="unit_pieces">pieces</string>
+
+    <!-- Detail -->
+    <string name="details_title">Details</string>
+    <string name="expiration_date_label">Expiration Date</string>
+    <string name="patient_name_detail_label">Patient</string>
+    <string name="medication_not_found">This medication no longer exists.</string>
+    <string name="delete_dialog_title">Delete medication</string>
+    <string name="delete_dialog_text">%1$s and its reminders will be removed. This cannot be undone.</string>
+    <string name="active_treatment_title">Active Treatment</string>
+    <string name="active_treatment_subtitle">Receive daily reminders</string>
+    <string name="schedule_title">Schedule</string>
+    <string name="clear_schedule">Clear Schedule</string>
+    <string name="clear_schedule_dialog_title">Clear schedule</string>
+    <string name="clear_schedule_dialog_text">Are you sure you want to remove all scheduled reminders?</string>
+    <string name="add_reminder_time">Add Reminder Time</string>
+    <string name="remove_reminder_time">Remove reminder</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_expiration_name">Expiration Alerts</string>
+    <string name="notification_channel_expiration_description">Medications that are about to expire or already expired</string>
+    <string name="notification_channel_reminders_name">Treatment Reminders</string>
+    <string name="notification_channel_reminders_description">Reminders to take your medication</string>
+    <string name="notification_expired_title">Expired Medications</string>
+    <plurals name="notification_expired_text">
+        <item quantity="one">%2$s has expired.</item>
+        <item quantity="other">%1$d medications have expired: %2$s</item>
+    </plurals>
+    <string name="notification_expiring_title">Expiring Soon</string>
+    <plurals name="notification_expiring_text">
+        <item quantity="one">%2$s expires this month.</item>
+        <item quantity="other">%1$d medications expire this month: %2$s</item>
+    </plurals>
+    <string name="notification_reminder_text">Time to take it (%1$s)</string>
+    <string name="notification_reminder_text_dosage">Time to take %1$s (%2$s)</string>
+    <string name="notification_reminder_text_patient">Time for %1$s to take it (%2$s)</string>
+    <string name="notification_reminder_text_dosage_patient">Time for %2$s to take %1$s (%3$s)</string>
+    <string name="notification_action_mark_taken">Mark as taken</string>
+    <string name="reminder_marked_as_taken">Medication marked as taken</string>
+
+    <!-- Previews -->
     <string name="preview_dashboard_screen">Dashboard Screen</string>
     <string name="preview_home_screen">Home Screen</string>
     <string name="preview_registration_screen">Registration Screen</string>
-    <string name="preview_detail_screen_format">Detail Screen for ID: %1$d</string>
-    <string name="notification_channel_name">Expiration Alerts</string>
-    <string name="notification_channel_description">Notifications for medications that are about to expire or already expired</string>
-    <string name="error_name_required">Please enter medication name</string>
-    <string name="error_failed_to_save">Failed to save</string>
-    <string name="dosage_form_tablet">Tablet</string>
+    <string name="preview_detail_screen">Detail Screen</string>
 </resources>

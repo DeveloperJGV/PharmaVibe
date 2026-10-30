@@ -1,49 +1,84 @@
 package com.aviva.controlfarmacia.ui.detail
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.aviva.controlfarmacia.data.local.entity.MedicationEntity
-import com.aviva.controlfarmacia.data.repository.MedicationRepository
+import androidx.navigation.toRoute
+import com.aviva.controlfarmacia.domain.model.Medication
+import com.aviva.controlfarmacia.domain.reminder.ReminderScheduler
+import com.aviva.controlfarmacia.domain.repository.MedicationRepository
+import com.aviva.controlfarmacia.ui.navigation.DetailRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalTime
 import javax.inject.Inject
 
 data class DetailUiState(
-    val medication: MedicationEntity? = null,
+    val medication: Medication? = null,
     val isLoading: Boolean = true,
-    val isDeleted: Boolean = false,
-    val error: String? = null
-)
+    val isDeleted: Boolean = false
+) {
+    val notFound: Boolean get() = !isLoading && medication == null && !isDeleted
+}
 
 @HiltViewModel
 class MedicationDetailViewModel @Inject constructor(
-    private val repository: MedicationRepository
+    savedStateHandle: SavedStateHandle,
+    private val repository: MedicationRepository,
+    private val reminderScheduler: ReminderScheduler
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(DetailUiState())
-    val uiState: StateFlow<DetailUiState> = _uiState.asStateFlow()
+    private val medicationId: Long = savedStateHandle.toRoute<DetailRoute>().medicationId
+    private val isDeleted = MutableStateFlow(false)
 
-    fun loadMedication(id: Long) {
+    val uiState: StateFlow<DetailUiState> =
+        combine(repository.observeById(medicationId), isDeleted) { medication, deleted ->
+            DetailUiState(medication = medication, isLoading = false, isDeleted = deleted)
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
+            initialValue = DetailUiState()
+        )
+
+    fun setInTreatment(active: Boolean) = updateMedication { it.copy(isInTreatment = active) }
+
+    fun addReminderTime(time: LocalTime) = updateMedication {
+        it.copy(reminderTimes = (it.reminderTimes + time).distinct().sorted())
+    }
+
+    fun removeReminderTime(time: LocalTime) = updateMedication {
+        it.copy(reminderTimes = it.reminderTimes - time)
+    }
+
+    fun clearReminderTimes() = updateMedication { it.copy(reminderTimes = emptyList()) }
+
+    fun delete() {
+        val current = uiState.value.medication ?: return
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val medication = repository.getMedicationById(id)
-            if (medication != null) {
-                _uiState.update { it.copy(medication = medication, isLoading = false) }
-            } else {
-                _uiState.update { it.copy(isLoading = false, error = "Medication not found") }
-            }
+            reminderScheduler.cancel(current)
+            repository.delete(current)
+            isDeleted.value = true
         }
     }
 
-    fun deleteMedication() {
-        val medication = _uiState.value.medication ?: return
+    /** Persists a change and keeps the scheduled alarms in sync with it. */
+    private fun updateMedication(transform: (Medication) -> Medication) {
+        val current = uiState.value.medication ?: return
+        val updated = transform(current)
+        if (updated == current) return
         viewModelScope.launch {
-            repository.deleteMedication(medication)
-            _uiState.update { it.copy(isDeleted = true) }
+            reminderScheduler.cancel(current)
+            repository.update(updated)
+            reminderScheduler.schedule(updated)
         }
+    }
+
+    private companion object {
+        const val STOP_TIMEOUT_MS = 5_000L
     }
 }

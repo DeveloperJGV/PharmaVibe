@@ -12,20 +12,33 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface MedicationDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertMedication(medication: MedicationEntity)
+    suspend fun insert(medication: MedicationEntity): Long
 
     @Update
-    suspend fun updateMedication(medication: MedicationEntity)
+    suspend fun update(medication: MedicationEntity)
 
     @Delete
-    suspend fun deleteMedication(medication: MedicationEntity)
+    suspend fun delete(medication: MedicationEntity)
 
     @Query("SELECT * FROM medications ORDER BY createdAt DESC")
-    fun getAllMedications(): Flow<List<MedicationEntity>>
+    fun observeAll(): Flow<List<MedicationEntity>>
 
     @Query("SELECT * FROM medications WHERE id = :id")
-    suspend fun getMedicationById(id: Long): MedicationEntity?
+    fun observeById(id: Long): Flow<MedicationEntity?>
 
-    @Query("SELECT * FROM medications WHERE name LIKE '%' || :query || '%'")
-    fun searchMedications(query: String): Flow<List<MedicationEntity>>
+    @Query("SELECT * FROM medications WHERE id = :id")
+    suspend fun getById(id: Long): MedicationEntity?
+
+    @Query("SELECT * FROM medications WHERE isCurrentlyInTreatment = 1")
+    suspend fun getAllInTreatment(): List<MedicationEntity>
+
+    /** [pattern] must already be a LIKE pattern with `%` and `_` escaped with a backslash. */
+    @Query(
+        """
+        SELECT * FROM medications
+        WHERE name LIKE :pattern ESCAPE '\' OR patientName LIKE :pattern ESCAPE '\'
+        ORDER BY createdAt DESC
+        """
+    )
+    fun search(pattern: String): Flow<List<MedicationEntity>>
 }

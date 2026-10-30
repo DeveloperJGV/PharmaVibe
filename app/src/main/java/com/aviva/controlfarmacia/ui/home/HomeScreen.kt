@@ -6,16 +6,36 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DockedSearchBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeFloatingActionButton
+import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -27,15 +47,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import com.aviva.controlfarmacia.R
-import com.aviva.controlfarmacia.data.local.entity.MedicationEntity
+import com.aviva.controlfarmacia.domain.model.Dosage
+import com.aviva.controlfarmacia.domain.model.DosageUnit
+import com.aviva.controlfarmacia.domain.model.Medication
+import com.aviva.controlfarmacia.ui.common.colors
+import com.aviva.controlfarmacia.ui.common.label
 import com.aviva.controlfarmacia.ui.theme.ControlFarmaciaTheme
-import java.util.Calendar
+import java.time.YearMonth
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun SharedTransitionScope.HomeScreen(
     onNavigateToRegistration: () -> Unit,
@@ -44,9 +68,12 @@ fun SharedTransitionScope.HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
 
     HomeContent(
         uiState = uiState,
+        searchQuery = searchQuery,
+        onSearchQueryChange = viewModel::onSearchQueryChange,
         onNavigateToRegistration = onNavigateToRegistration,
         onNavigateToDetail = onNavigateToDetail,
         animatedVisibilityScope = animatedVisibilityScope
@@ -57,20 +84,50 @@ fun SharedTransitionScope.HomeScreen(
 @Composable
 fun SharedTransitionScope.HomeContent(
     uiState: HomeUiState,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
     onNavigateToRegistration: () -> Unit,
     onNavigateToDetail: (Long) -> Unit,
-    animatedVisibilityScope: AnimatedVisibilityScope
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    modifier: Modifier = Modifier
 ) {
     Scaffold(
+        modifier = modifier,
         topBar = {
-            LargeTopAppBar(
-                title = { Text(stringResource(R.string.my_pharmacy), fontWeight = FontWeight.Bold) },
-                actions = {
-                    IconButton(onClick = { /* TODO: Search */ }) {
-                        Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
-                    }
-                }
-            )
+            Column(modifier = Modifier.fillMaxWidth()) {
+                LargeTopAppBar(
+                    title = { Text(stringResource(R.string.my_pharmacy), fontWeight = FontWeight.Bold) }
+                )
+                DockedSearchBar(
+                    inputField = {
+                        SearchBarDefaults.InputField(
+                            query = searchQuery,
+                            onQueryChange = onSearchQueryChange,
+                            onSearch = {},
+                            expanded = false,
+                            onExpandedChange = {},
+                            placeholder = { Text(stringResource(R.string.search_placeholder)) },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { onSearchQueryChange("") }) {
+                                        Icon(
+                                            Icons.Default.Close,
+                                            contentDescription = stringResource(R.string.clear_search)
+                                        )
+                                    }
+                                }
+                            }
+                        )
+                    },
+                    expanded = false,
+                    onExpandedChange = {},
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 16.dp)
+                ) {}
+            }
         },
         floatingActionButton = {
             LargeFloatingActionButton(
@@ -82,16 +139,17 @@ fun SharedTransitionScope.HomeContent(
             }
         }
     ) { padding ->
-        if (uiState.isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+        when {
+            uiState.isLoading -> CenteredBox(padding) { CircularProgressIndicator() }
+            uiState.medications.isEmpty() -> CenteredBox(padding) {
+                Text(
+                    text = stringResource(
+                        if (searchQuery.isBlank()) R.string.no_medications else R.string.no_search_results
+                    ),
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
-        } else if (uiState.medications.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.no_medications), style = MaterialTheme.typography.bodyLarge)
-            }
-        } else {
-            LazyVerticalGrid(
+            else -> LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 contentPadding = PaddingValues(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -101,6 +159,7 @@ fun SharedTransitionScope.HomeContent(
                 items(uiState.medications, key = { it.id }) { medication ->
                     MedicationCard(
                         medication = medication,
+                        today = uiState.today,
                         onClick = { onNavigateToDetail(medication.id) },
                         animatedVisibilityScope = animatedVisibilityScope
                     )
@@ -110,36 +169,34 @@ fun SharedTransitionScope.HomeContent(
     }
 }
 
+@Composable
+private fun CenteredBox(padding: PaddingValues, content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(padding),
+        contentAlignment = Alignment.Center
+    ) {
+        content()
+    }
+}
+
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun SharedTransitionScope.MedicationCard(
-    medication: MedicationEntity,
+    medication: Medication,
+    today: YearMonth,
     onClick: () -> Unit,
-    animatedVisibilityScope: AnimatedVisibilityScope
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    modifier: Modifier = Modifier
 ) {
-    val calendar = Calendar.getInstance()
-    val currentMonth = calendar.get(Calendar.MONTH) + 1
-    val currentYear = calendar.get(Calendar.YEAR)
-
-    val isExpired = medication.expiryYear < currentYear || (medication.expiryYear == currentYear && medication.expiryMonth < currentMonth)
-    val isExpiringSoon = medication.expiryMonth == currentMonth && medication.expiryYear == currentYear
-
-    val badgeColor = when {
-        isExpired -> MaterialTheme.colorScheme.errorContainer
-        isExpiringSoon -> MaterialTheme.colorScheme.tertiaryContainer
-        else -> MaterialTheme.colorScheme.secondaryContainer
-    }
-    
-    val badgeTextColor = when {
-        isExpired -> MaterialTheme.colorScheme.onErrorContainer
-        isExpiringSoon -> MaterialTheme.colorScheme.onTertiaryContainer
-        else -> MaterialTheme.colorScheme.onSecondaryContainer
-    }
+    val badgeColors = medication.expiryStatus(today).colors()
 
     Card(
+        onClick = onClick,
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        modifier = Modifier.clickable { onClick() }
+        modifier = modifier
     ) {
         Column {
             Box(
@@ -165,7 +222,8 @@ fun SharedTransitionScope.MedicationCard(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(MaterialTheme.colorScheme.secondaryContainer),
-                        contentAlignment = Alignment.Center) {
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
                             text = medication.name.take(1).uppercase(),
                             style = MaterialTheme.typography.headlineLarge,
@@ -173,22 +231,23 @@ fun SharedTransitionScope.MedicationCard(
                         )
                     }
                 }
-                
-                // Expiry Badge
+
                 Surface(
-                    modifier = Modifier.padding(8.dp).align(Alignment.TopEnd),
-                    color = badgeColor,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .align(Alignment.TopEnd),
+                    color = badgeColors.container,
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        text = stringResource(R.string.expiry_date_format, medication.expiryMonth, medication.expiryYear),
+                        text = medication.expiry.label(),
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelSmall,
-                        color = badgeTextColor
+                        color = badgeColors.content
                     )
                 }
             }
-            
+
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
                     text = medication.name,
@@ -201,11 +260,16 @@ fun SharedTransitionScope.MedicationCard(
                         animatedVisibilityScope = animatedVisibilityScope
                     )
                 )
-                Text(
-                    text = medication.dosageForm,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                val subtitle = medication.dosage?.label() ?: medication.patientName
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }
@@ -214,53 +278,32 @@ fun SharedTransitionScope.MedicationCard(
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Preview(showBackground = true)
 @Composable
-fun HomeScreenPreview() {
+private fun HomeContentPreview() {
+    val today = YearMonth.of(2026, 10)
     ControlFarmaciaTheme {
         SharedTransitionLayout {
             AnimatedVisibility(visible = true) {
                 HomeContent(
                     uiState = HomeUiState(
                         medications = listOf(
-                            MedicationEntity(1, "Paracetamol", "Tablet", null, 12, 2025),
-                            MedicationEntity(2, "Ibuprofen", "Capsule", null, 10, 2024),
-                            MedicationEntity(3, "Amoxicillin", "Capsule", null, 5, 2025)
+                            Medication(
+                                id = 1,
+                                name = "Paracetamol",
+                                dosage = Dosage("500", DosageUnit.MILLIGRAM),
+                                expiry = today.plusMonths(6)
+                            ),
+                            Medication(id = 2, name = "Ibuprofen", expiry = today),
+                            Medication(id = 3, name = "Amoxicillin", patientName = "Luna", expiry = today.minusMonths(1))
                         ),
+                        today = today,
                         isLoading = false
                     ),
+                    searchQuery = "",
+                    onSearchQueryChange = {},
                     onNavigateToRegistration = {},
                     onNavigateToDetail = {},
-                    animatedVisibilityScope = this
+                    animatedVisibilityScope = this@AnimatedVisibility
                 )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalSharedTransitionApi::class)
-@Preview(showBackground = true)
-@Composable
-fun MedicationCardPreview() {
-    ControlFarmaciaTheme {
-        SharedTransitionLayout {
-            AnimatedVisibility(visible = true) {
-                val scope = this
-                Column(
-                    modifier = Modifier.padding(16.dp).width(200.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    MedicationCard(
-                        medication = MedicationEntity(
-                            id = 1,
-                            name = "Paracetamol 500mg",
-                            dosageForm = "Tablet",
-                            photoPath = null,
-                            expiryMonth = 12,
-                            expiryYear = 2025
-                        ),
-                        onClick = {},
-                        animatedVisibilityScope = scope
-                    )
-                }
             }
         }
     }

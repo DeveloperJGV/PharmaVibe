@@ -2,14 +2,15 @@ package com.aviva.controlfarmacia.ui.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.aviva.controlfarmacia.data.local.entity.MedicationEntity
-import com.aviva.controlfarmacia.data.repository.MedicationRepository
+import com.aviva.controlfarmacia.domain.model.ExpiryStatus
+import com.aviva.controlfarmacia.domain.repository.MedicationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import java.util.Calendar
+import java.time.Clock
+import java.time.YearMonth
 import javax.inject.Inject
 
 data class DashboardUiState(
@@ -21,33 +22,28 @@ data class DashboardUiState(
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
-    private val repository: MedicationRepository
+    repository: MedicationRepository,
+    private val clock: Clock
 ) : ViewModel() {
 
-    val uiState: StateFlow<DashboardUiState> = repository.getAllMedications()
+    val uiState: StateFlow<DashboardUiState> = repository.observeAll()
         .map { medications ->
-            val calendar = Calendar.getInstance()
-            val currentMonth = calendar.get(Calendar.MONTH) + 1
-            val currentYear = calendar.get(Calendar.YEAR)
-
-            val expiringThisMonth = medications.count { 
-                it.expiryMonth == currentMonth && it.expiryYear == currentYear 
-            }
-            
-            val expired = medications.count { 
-                it.expiryYear < currentYear || (it.expiryYear == currentYear && it.expiryMonth < currentMonth)
-            }
-
+            val today = YearMonth.now(clock)
+            val countByStatus = medications.groupingBy { it.expiryStatus(today) }.eachCount()
             DashboardUiState(
                 totalMedications = medications.size,
-                expiringThisMonth = expiringThisMonth,
-                expired = expired,
+                expiringThisMonth = countByStatus[ExpiryStatus.EXPIRING_THIS_MONTH] ?: 0,
+                expired = countByStatus[ExpiryStatus.EXPIRED] ?: 0,
                 isLoading = false
             )
         }
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
             initialValue = DashboardUiState()
         )
+
+    private companion object {
+        const val STOP_TIMEOUT_MS = 5_000L
+    }
 }

@@ -1,7 +1,14 @@
 package com.aviva.controlfarmacia.ui.dashboard
 
-import android.os.Build
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -9,25 +16,31 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aviva.controlfarmacia.R
+import com.aviva.controlfarmacia.ui.common.rememberNotificationPermissionRequest
 import com.aviva.controlfarmacia.ui.theme.ControlFarmaciaTheme
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 
-@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun DashboardScreen(
     onNavigateToList: () -> Unit,
@@ -35,21 +48,11 @@ fun DashboardScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        val notificationPermissionState = rememberPermissionState(
-            android.Manifest.permission.POST_NOTIFICATIONS
-        )
-        LaunchedEffect(Unit) {
-            if (!notificationPermissionState.status.isGranted) {
-                notificationPermissionState.launchPermissionRequest()
-            }
-        }
-    }
+    // Expiration alerts are the core of the app, so ask on first launch.
+    val requestNotificationPermission = rememberNotificationPermissionRequest()
+    LaunchedEffect(Unit) { requestNotificationPermission() }
 
-    DashboardContent(
-        uiState = uiState,
-        onNavigateToList = onNavigateToList
-    )
+    DashboardContent(uiState = uiState, onNavigateToList = onNavigateToList)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -112,12 +115,14 @@ fun DashboardContent(
                     modifier = Modifier.weight(1f)
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Button(
                 onClick = onNavigateToList,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Text(stringResource(R.string.view_full_inventory))
@@ -131,8 +136,8 @@ fun StatCard(
     title: String,
     value: String,
     icon: ImageVector,
-    containerColor: androidx.compose.ui.graphics.Color,
-    contentColor: androidx.compose.ui.graphics.Color,
+    containerColor: Color,
+    contentColor: Color,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
@@ -143,7 +148,9 @@ fun StatCard(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = containerColor,
-            contentColor = contentColor
+            contentColor = contentColor,
+            disabledContainerColor = containerColor,
+            disabledContentColor = contentColor
         )
     ) {
         Column(
@@ -161,7 +168,7 @@ fun StatCard(
 
 @Preview(showBackground = true)
 @Composable
-fun DashboardScreenPreview() {
+private fun DashboardScreenPreview() {
     ControlFarmaciaTheme {
         DashboardContent(
             uiState = DashboardUiState(
@@ -172,38 +179,5 @@ fun DashboardScreenPreview() {
             ),
             onNavigateToList = {}
         )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun StatCardPreview() {
-    ControlFarmaciaTheme {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            StatCard(
-                title = stringResource(R.string.total_medications),
-                value = "24",
-                icon = Icons.Default.Inventory,
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            StatCard(
-                title = stringResource(R.string.expiring_soon),
-                value = "3",
-                icon = Icons.Default.NotificationsActive,
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-            )
-            StatCard(
-                title = stringResource(R.string.expired),
-                value = "1",
-                icon = Icons.Default.Warning,
-                containerColor = MaterialTheme.colorScheme.errorContainer,
-                contentColor = MaterialTheme.colorScheme.onErrorContainer
-            )
-        }
     }
 }

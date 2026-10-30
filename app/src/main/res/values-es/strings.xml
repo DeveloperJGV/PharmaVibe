@@ -1,0 +1,107 @@
+<resources>
+    <string name="app_name">PharmaVibe</string>
+
+    <!-- Común -->
+    <string name="back">Atrás</string>
+    <string name="cancel">Cancelar</string>
+    <string name="add">Agregar</string>
+    <string name="clear">Borrar</string>
+    <string name="delete">Eliminar</string>
+
+    <!-- Tablero -->
+    <string name="inventory_overview">Resumen del inventario</string>
+    <string name="total_medications">Medicamentos</string>
+    <string name="expiring_soon">Por caducar</string>
+    <string name="expired">Caducados</string>
+    <string name="view_full_inventory">Ver inventario completo</string>
+
+    <!-- Inventario -->
+    <string name="my_pharmacy">Mi botiquín</string>
+    <string name="search_placeholder">Buscar medicamento o paciente…</string>
+    <string name="clear_search">Borrar búsqueda</string>
+    <string name="add_medication">Agregar medicamento</string>
+    <string name="no_medications">Aún no hay medicamentos registrados.</string>
+    <string name="no_search_results">Ningún medicamento coincide con la búsqueda.</string>
+    <string name="expiry_date_format">%1$02d/%2$d</string>
+    <string name="dosage_format">%1$s %2$s</string>
+
+    <!-- Registro -->
+    <string name="registration_title">Registrar medicamento</string>
+    <string name="capture">Capturar</string>
+    <string name="close_camera">Cerrar cámara</string>
+    <string name="camera_preview_placeholder">Vista previa de la cámara</string>
+    <string name="medication_photo_description">Foto del medicamento</string>
+    <string name="retake">Repetir</string>
+    <string name="take_photo_and_scan">Tomar foto y escanear</string>
+    <string name="medication_name_label">Nombre del medicamento</string>
+    <string name="dosage_label">Dosis</string>
+    <string name="dosage_unit_label">Unidad</string>
+    <string name="patient_category_human">Persona</string>
+    <string name="patient_category_pet">Mascota</string>
+    <string name="patient_name_label">Nombre del paciente (opcional)</string>
+    <string name="pet_name_label">Nombre de la mascota</string>
+    <string name="month_label">Mes</string>
+    <string name="year_label">Año</string>
+    <string name="save_medication">Guardar medicamento</string>
+    <string name="error_name_required">Escribe el nombre del medicamento</string>
+    <string name="error_failed_to_save">No se pudo guardar el medicamento</string>
+    <string name="error_photo_failed">No se pudo guardar la foto. Intenta tomarla de nuevo.</string>
+    <string name="error_capture_failed">La cámara no pudo tomar la foto</string>
+
+    <!-- Unidades de dosis -->
+    <string name="unit_mg">mg</string>
+    <string name="unit_ml">ml</string>
+    <string name="unit_iu">UI</string>
+    <string name="unit_g">g</string>
+    <string name="unit_capsules">cápsulas</string>
+    <string name="unit_tablets">tabletas</string>
+    <string name="unit_drops">gotas</string>
+    <string name="unit_puffs">inhalaciones</string>
+    <string name="unit_pieces">piezas</string>
+
+    <!-- Detalle -->
+    <string name="details_title">Detalles</string>
+    <string name="expiration_date_label">Fecha de caducidad</string>
+    <string name="patient_name_detail_label">Paciente</string>
+    <string name="medication_not_found">Este medicamento ya no existe.</string>
+    <string name="delete_dialog_title">Eliminar medicamento</string>
+    <string name="delete_dialog_text">Se eliminará %1$s y sus recordatorios. Esto no se puede deshacer.</string>
+    <string name="active_treatment_title">Tratamiento activo</string>
+    <string name="active_treatment_subtitle">Recibir recordatorios diarios</string>
+    <string name="schedule_title">Horario</string>
+    <string name="clear_schedule">Borrar horario</string>
+    <string name="clear_schedule_dialog_title">Borrar horario</string>
+    <string name="clear_schedule_dialog_text">¿Seguro que quieres quitar todos los recordatorios programados?</string>
+    <string name="add_reminder_time">Agregar hora de recordatorio</string>
+    <string name="remove_reminder_time">Quitar recordatorio</string>
+
+    <!-- Notificaciones -->
+    <string name="notification_channel_expiration_name">Alertas de caducidad</string>
+    <string name="notification_channel_expiration_description">Medicamentos por caducar o ya caducados</string>
+    <string name="notification_channel_reminders_name">Recordatorios de tratamiento</string>
+    <string name="notification_channel_reminders_description">Recordatorios para tomar tu medicamento</string>
+    <string name="notification_expired_title">Medicamentos caducados</string>
+    <plurals name="notification_expired_text">
+        <item quantity="one">%2$s ya caducó.</item>
+        <item quantity="many">%1$d medicamentos caducaron: %2$s</item>
+        <item quantity="other">%1$d medicamentos caducaron: %2$s</item>
+    </plurals>
+    <string name="notification_expiring_title">Por caducar</string>
+    <plurals name="notification_expiring_text">
+        <item quantity="one">%2$s caduca este mes.</item>
+        <item quantity="many">%1$d medicamentos caducan este mes: %2$s</item>
+        <item quantity="other">%1$d medicamentos caducan este mes: %2$s</item>
+    </plurals>
+    <string name="notification_reminder_text">Hora de tomarlo (%1$s)</string>
+    <string name="notification_reminder_text_dosage">Hora de tomar %1$s (%2$s)</string>
+    <string name="notification_reminder_text_patient">Hora de que %1$s lo tome (%2$s)</string>
+    <string name="notification_reminder_text_dosage_patient">Hora de que %2$s tome %1$s (%3$s)</string>
+    <string name="notification_action_mark_taken">Marcar como tomado</string>
+    <string name="reminder_marked_as_taken">Medicamento marcado como tomado</string>
+
+    <!-- Previews -->
+    <string name="preview_dashboard_screen">Pantalla de tablero</string>
+    <string name="preview_home_screen">Pantalla de inicio</string>
+    <string name="preview_registration_screen">Pantalla de registro</string>
+    <string name="preview_detail_screen">Pantalla de detalle</string>
+</resources>

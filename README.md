@@ -5,34 +5,55 @@
 ![Material 3](https://img.shields.io/badge/Material%203-EADDFF?style=for-the-badge&logo=materialdesign&logoColor=black)
 ![Hilt](https://img.shields.io/badge/Dagger%20Hilt-00C4B3?style=for-the-badge&logo=android&logoColor=white)
 
-> Smart medication expiration tracker using CameraX & ML Kit. A 100% "vibe code" experimental project built entirely with the Panda 2 AI agent in Android Studio to test its generative capabilities.
+> Smart medication expiration tracker using CameraX & ML Kit. Started as a 100% "vibe code" experiment generated with the Panda 2 AI agent in Android Studio, then reviewed and cleaned up by hand.
 
 ## The AI "Vibe Code" Experiment
-This repository is an ongoing experiment in AI-driven development. The entire initial architecture, UI, and feature set were generated via advanced prompting using the **Panda 2 AI Agent** within Android Studio. The goal is to explore the limits of generative AI in building production-ready, highly polished Android applications from scratch.
+The initial architecture, UI and feature set were generated via prompting with the **Panda 2 AI Agent** within Android Studio. A later pass reviewed that output, fixed the bugs it shipped with and brought the code up to the practices listed below. The commit history keeps both stages.
 
 ## Project Brief
-PharmaVibe (ControlFarmacia) is a high-performance tracker designed to manage your home pharmacy efficiently. It solves the common problem of mismatched prescription amounts and expiring boxes. By leveraging modern Android APIs, the app simplifies inventory management and ensures you never use expired medication through proactive local notifications.
+PharmaVibe (ControlFarmacia) keeps track of a home pharmacy. Register a medication by pointing the camera at the box (the name is read with on-device OCR), add the dosage, who it is for (a person or a pet) and the expiration month. The app warns before medications expire and, while a medication is "in treatment", reminds you of each intake with daily alarms.
 
 ## Key Features
-* **Intelligent Registration:** Capture high-resolution photos of medication packaging and scan barcodes using Google ML Kit for rapid data entry.
-* **Smart Inventory Management:** A centralized dashboard to track medication names and expiration dates (Month/Year).
-* **Proactive Expiration Alerts:** Automated background monitoring that triggers local notifications to warn users before medications expire.
-* **Visual Gallery & Navigation:** Browse the medication inventory with high-quality images and premium shared element transitions.
+* **Camera registration:** take a photo of the packaging; ML Kit text recognition fills in the medication name live.
+* **Inventory dashboard:** totals, expiring-this-month and expired counts, plus a searchable grid with photos.
+* **Expiration alerts:** a daily WorkManager job notifies about expired and soon-to-expire medications.
+* **Treatment reminders:** exact alarms at the times you choose, re-armed after reboots, time changes and app updates, with a "mark as taken" action.
+* **English and Spanish** UI.
 
-## High-Level Technical Stack
+## Architecture
+
+```
+domain/      Medication model, ExpiryStatus, repository/scheduler/photo-store interfaces (pure Kotlin)
+data/        Room (entity, DAO, mapper), AlarmManager scheduler and receivers, notifications, WorkManager, photo storage
+di/          Hilt modules (database, bindings, Clock)
+ui/          Compose screens + ViewModels: dashboard, home, registration, detail; camera + OCR analyzer; theme
+```
+
+* ViewModels expose a single `StateFlow` of UI state and depend only on domain interfaces, so they are unit-tested with in-memory fakes (`app/src/test`).
+* `Clock` is injected wherever "today" matters.
+* Room schema is exported to `app/schemas/`; destructive migration is only allowed from the pre-release versions 1 and 2.
+* Navigation uses type-safe routes (`@Serializable` route objects).
+
+## Technical Stack
 
 | Category | Technology |
 | :--- | :--- |
-| **Language** | Kotlin |
-| **Architecture** | MVVM + Clean Architecture |
+| **Language** | Kotlin 2.4 (built into AGP 9.5), Java 17 target, compile/target SDK 37 |
+| **Architecture** | MVVM with a small domain layer |
 | **Dependency Injection** | Dagger-Hilt |
-| **UI Framework** | Jetpack Compose (Material 3), Navigation Compose |
-| **Persistence** | Room Database (with KSP) |
-| **Media & Vision** | CameraX, Google ML Kit (Barcode), Coil |
-| **Background Tasks** | WorkManager |
+| **UI** | Jetpack Compose (Material 3), Navigation Compose, shared element transitions |
+| **Persistence** | Room (KSP) |
+| **Media & Vision** | CameraX, ML Kit Text Recognition, Coil 3 |
+| **Background** | WorkManager (expiration checks), AlarmManager (intake reminders) |
 | **Concurrency** | Kotlin Coroutines & Flow |
+| **Tests** | JUnit 4, kotlinx-coroutines-test |
 
-## Performance & Design Standards
-* **Material 3 Design:** Edge-to-Edge display support with a vibrant, energetic dynamic color scheme and an adaptive app icon.
-* **Optimized Hardware Performance:** Animations run at a fluid 60fps, thoroughly optimized for modern flagship hardware such as the Samsung S24.
-* **Efficient Media Handling:** Custom `LocalMediaManager` and `ImageCompressor` ensure high-quality photo captures do not bloat internal storage.
+## Building
+
+```
+./gradlew :app:assembleDebug       # debug APK
+./gradlew :app:testDebugUnitTest   # unit tests
+./gradlew :app:lintDebug           # lint report
+```
+
+Requires JDK 17 and Android SDK 37 (Gradle 9.8, AGP 9.5).
